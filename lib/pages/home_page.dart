@@ -1,0 +1,799 @@
+import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'login_page.dart';
+import 'item_page.dart';
+import 'item_in_page.dart';
+import 'item_out_page.dart';
+import 'history_page.dart';
+import 'dashboard_page.dart';
+
+class HomePage extends StatelessWidget {
+  const HomePage({super.key});
+
+  Future<void> logout(BuildContext context) async {
+    await FirebaseAuth.instance.signOut();
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.clear();
+    Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LoginPage()));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
+    final String displayName = user?.email?.split('@').first ?? 'User';
+
+return Scaffold(
+  backgroundColor: const Color(0xFFF1F1F1),
+  floatingActionButton: FloatingActionButton(
+    backgroundColor: const Color(0xFFFF6F3D),
+    onPressed: () => showAddItemDialog(context),
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(30.0),
+    ),
+    child: const Icon(Icons.add, color: Colors.white),
+  ),
+  body: Column(
+    children: [
+      header(displayName, context),
+      menuGrid(),
+    ],
+  ),
+);
+  }
+
+  Widget header(String displayName, BuildContext context) {
+    return SizedBox(
+      height: 250,
+      child: Stack(
+        children: [
+          Positioned(
+            top: 0, left: 0, right: 0, bottom: -50,
+            child: Image.asset('src/header2.png', fit: BoxFit.cover),
+          ),
+          Positioned(
+            top: 0, left: 0, right: 0, bottom: -30,
+            child: Image.asset('src/header1.png', fit: BoxFit.cover),
+          ),
+          Positioned(
+            top: 60, left: 20,
+            child: Row(
+              children: [
+                const CircleAvatar(backgroundImage: AssetImage('src/avatar.png'), radius: 28),
+                const SizedBox(width: 10),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text("Hello, Good morning!", style: TextStyle(color: Colors.white, fontSize: 14)),
+                    Text(displayName, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          Positioned(
+            top: 50, right: 10,
+            child: PopupMenuButton<String>(
+              icon: const Icon(Icons.more_vert, color: Colors.white),
+              onSelected: (value) {
+                if (value == 'logout') logout(context);
+              },
+              itemBuilder: (context) => [
+                const PopupMenuItem<String>(value: 'logout', child: Text('Logout')),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget menuGrid() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 30),
+      child: Wrap(
+        spacing: 15,
+        runSpacing: 15,
+        alignment: WrapAlignment.start,
+        children: const [
+          MenuImageItem(imagePath: 'src/dashboard.png', label: 'Dashboard'),
+          MenuImageItem(imagePath: 'src/item.png', label: 'Items'),
+          MenuImageItem(imagePath: 'src/itemin.png', label: 'Item In'),
+          MenuImageItem(imagePath: 'src/itemout.png', label: 'Item Out'),
+          MenuImageItem(imagePath: 'src/history.png', label: 'History'),
+        ],
+      ),
+    );
+  }
+
+ void showAddItemDialog(BuildContext context) {
+  final skuCtrl = TextEditingController();
+  final merkCtrl = TextEditingController();
+  final nameCtrl = TextEditingController();
+  final amountCtrl = TextEditingController();
+
+  String? selectedCategory;
+  String? skuErr, merkErr, nameErr, amountErr, categoryErr;
+  List<String> categories = [];
+
+  showDialog(
+    context: context,
+    builder: (context) {
+      return StatefulBuilder(
+        builder: (context, setState) {
+          Future<void> loadCategories() async {
+            final snapshot = await FirebaseFirestore.instance.collection('categories').get();
+            categories = snapshot.docs.map((doc) => doc.id).toList();
+            setState(() {});
+          }
+
+          if (categories.isEmpty) loadCategories();
+
+          return Dialog(
+            backgroundColor: Colors.transparent,
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 5),
+              padding: const EdgeInsets.all(30),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF5F5F5),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      "ADD ITEM",
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF666666),
+                        letterSpacing: 1,
+                      ),
+                    ),
+                    const SizedBox(height: 25),
+                    
+                    _buildRoundedTextField(skuCtrl, 'SKU', errorText: skuErr),
+                    const SizedBox(height: 5),
+                    
+                    _buildRoundedTextField(merkCtrl, 'MERK', errorText: merkErr),
+                    const SizedBox(height: 5),
+                    
+                    _buildRoundedTextField(nameCtrl, 'NAME ITEMS', errorText: nameErr),
+                    const SizedBox(height: 5),
+                    
+                    _buildRoundedTextField(amountCtrl, 'AMOUNT', errorText: amountErr, inputType: TextInputType.number),
+                    const SizedBox(height: 10),
+                    
+                    const Text(
+                      "Category",
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                        color: Color.fromARGB(255, 75, 75, 75),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(15),
+                        border: Border.all(
+                          color: categoryErr != null ? Colors.red : const Color.fromARGB(255, 160, 160, 160),
+                          width: 1,
+                        ),
+                      ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                          value: selectedCategory,
+                          hint: const Text(
+                            'Category name',
+                            style: TextStyle(
+                              color: Color.fromARGB(255, 126, 126, 126),
+                              fontSize: 14,
+                            ),
+                          ),
+                          isExpanded: true,
+                          icon: const Icon(
+                            Icons.keyboard_arrow_down,
+                            color: Color(0xFF666666),
+                          ),
+                          items: categories.map((cat) => DropdownMenuItem(
+                            value: cat, 
+                            child: Text(
+                              cat,
+                              style: const TextStyle(
+                                color: Color(0xFF333333),
+                                fontSize: 14,
+                              ),
+                            ),
+                          )).toList(),
+                          onChanged: (val) => setState(() => selectedCategory = val),
+                        ),
+                      ),
+                    ),
+                    if (categoryErr != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4, left: 16),
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            categoryErr!,
+                            style: const TextStyle(
+                              color: Colors.red,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                      ),
+                    
+
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        TextButton(
+                          onPressed: () async {
+                            final newCat = await showAddCategoryDialog(context);
+                            if (newCat != null) {
+                              selectedCategory = newCat;
+                              loadCategories();
+                            }
+                          },
+                          child: const Text(
+                            "Add Category +",
+                            style: TextStyle(
+                              color: Color(0xFFFF6F3D),
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                        if (categories.isNotEmpty)
+                          TextButton(
+                            onPressed: () async {
+                              await showDeleteCategoryDialog(context, categories);
+                              loadCategories();
+                            },
+                            child: const Text(
+                              "Delete Category",
+                              style: TextStyle(
+                                color: Color.fromARGB(255, 85, 85, 85),
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                    
+                    Row(
+                      children: [
+                        // Save Button
+                        Expanded(
+                          child: Container(
+                            height: 50,
+                            child: ElevatedButton(
+                              onPressed: () async {
+                                final sku = skuCtrl.text.trim();
+                                final merk = merkCtrl.text.trim();
+                                final name = nameCtrl.text.trim();
+                                final amountText = amountCtrl.text.trim();
+
+                                setState(() {
+                                  skuErr = sku.isEmpty ? 'Required' : null;
+                                  merkErr = merk.isEmpty ? 'Required' : null;
+                                  nameErr = name.isEmpty ? 'Required' : null;
+                                  amountErr = amountText.isEmpty ? 'Required' : null;
+                                  categoryErr = selectedCategory == null ? 'Select category' : null;
+                                });
+
+                                if ([skuErr, merkErr, nameErr, amountErr, categoryErr].any((e) => e != null)) return;
+
+                                final amount = int.tryParse(amountText);
+                                if (amount == null) {
+                                  setState(() => amountErr = 'Must be a number');
+                                  return;
+                                }
+
+                                final ref = FirebaseFirestore.instance
+                                    .collection('categories')
+                                    .doc(selectedCategory)
+                                    .collection('items')
+                                    .doc(sku);
+
+                                final exists = await ref.get();
+                                if (exists.exists) {
+                                  setState(() => skuErr = 'SKU already used');
+                                  return;
+                                }
+
+                                try {
+                                  await ref.set({
+                                    'sku': sku,
+                                    'merk': merk,
+                                    'name': name,
+                                    'amount': amount,
+                                    'timestamp': FieldValue.serverTimestamp(),
+                                  });
+
+                                  await HistoryHelper.addHistoryEntry(
+                                    action: 'item_added',
+                                    itemSku: sku,
+                                    itemName: name,
+                                    itemMerk: merk,
+                                    category: selectedCategory!,
+                                    amount: amount,
+                                    description: 'New item added to inventory',
+                                  );
+
+                                  Navigator.pop(context);
+                                  _showSuccessDialog(context, 'Item "$name" added successfully');
+                                } catch (e) {
+                                  _showErrorDialog(context, 'Failed to add item: ${e.toString()}');
+                                }
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFFFF6F3D),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(25),
+                                ),
+                                elevation: 0,
+                              ),
+                              child: const Text(
+                                "Save",
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        
+                        const SizedBox(width: 16),
+                        
+                        Expanded(
+                          child: Container(
+                            height: 50,
+                            child: ElevatedButton(
+                              onPressed: () => Navigator.pop(context),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF666666),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(25),
+                                ),
+                                elevation: 0,
+                              ),
+                              child: const Text(
+                                "Cancel",
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      );
+    },
+  );
+}
+
+Widget _buildRoundedTextField(
+  TextEditingController controller, 
+  String hint, {
+  TextInputType? inputType,
+  String? errorText,
+}) {
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Container(
+        decoration: BoxDecoration(
+          color: const Color.fromARGB(255, 255, 255, 255),
+          borderRadius: BorderRadius.circular(15),
+          border: Border.all(
+            color: errorText != null ? Colors.red : const Color.fromARGB(255, 136, 136, 136),
+            width: 1,
+          ),
+        ),
+        child: TextField(
+          controller: controller,
+          keyboardType: inputType,
+          decoration: InputDecoration(
+            hintText: hint,
+            hintStyle: const TextStyle(
+              color: Color.fromARGB(255, 117, 117, 117),
+              fontSize: 14,
+            ),
+            border: InputBorder.none,
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 20,
+              vertical: 16,
+            ),
+          ),
+          style: const TextStyle(
+            color: Color.fromARGB(255, 114, 114, 114),
+            fontSize: 14,
+          ),
+        ),
+      ),
+      if (errorText != null)
+        Padding(
+          padding: const EdgeInsets.only(top: 4, left: 16),
+          child: Text(
+            errorText,
+            style: const TextStyle(
+              color: Colors.red,
+              fontSize: 12,
+            ),
+          ),
+        ),
+    ],
+  );
+}
+
+  Future<String?> showAddCategoryDialog(BuildContext context) async {
+    final controller = TextEditingController();
+    String? error;
+
+    return await showDialog<String>(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(builder: (context, setState) {
+          return AlertDialog(
+            title: const Text("Add Category"),
+            content: TextField(
+              controller: controller,
+              decoration: InputDecoration(
+                hintText: "Enter category name",
+                errorText: error,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
+              TextButton(
+                onPressed: () async {
+                  final name = controller.text.trim();
+                  if (name.isEmpty) {
+                    setState(() => error = 'Category name cannot be empty');
+                    return;
+                  }
+
+                  final exists = await FirebaseFirestore.instance.collection('categories').doc(name).get();
+                  if (exists.exists) {
+                    setState(() => error = 'Category already exists');
+                    return;
+                  }
+
+                  try {
+                    await FirebaseFirestore.instance.collection('categories').doc(name).set({
+                      'created_at': FieldValue.serverTimestamp(),
+                    });
+                    
+                    Navigator.pop(context, name);
+                    _showSuccessDialog(context, 'Category "$name" created successfully');
+                  } catch (e) {
+                    _showErrorDialog(context, 'Failed to create category: ${e.toString()}');
+                  }
+                },
+                child: const Text("Add"),
+              ),
+            ],
+          );
+        });
+      },
+    );
+  }
+
+  Future<void> showDeleteCategoryDialog(BuildContext context, List<String> categories) async {
+    String? selectedCategory;
+    String? error;
+
+    return await showDialog<void>(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(builder: (context, setState) {
+          return AlertDialog(
+            title: const Text("Delete Category", style: TextStyle(color: Colors.red)),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text("Select a category to delete:"),
+                const SizedBox(height: 10),
+                DropdownButtonFormField<String>(
+                  value: selectedCategory,
+                  hint: const Text('Select Category'),
+                  items: categories.map((cat) => DropdownMenuItem(value: cat, child: Text(cat))).toList(),
+                  onChanged: (val) => setState(() => selectedCategory = val),
+                  decoration: InputDecoration(
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    errorText: error,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                const Text(
+                  "Warning: This will delete the category and ALL items within it!",
+                  style: TextStyle(color: Colors.red, fontSize: 12),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text("Cancel"),
+              ),
+              TextButton(
+                onPressed: () async {
+                  if (selectedCategory == null) {
+                    setState(() => error = 'Please select a category');
+                    return;
+                  }
+
+                  final confirm = await showDialog<bool>(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: const Text("Confirm Delete"),
+                      content: Text("Are you sure you want to delete category '$selectedCategory' and all its items?"),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context, false),
+                          child: const Text("Cancel"),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.pop(context, true),
+                          style: TextButton.styleFrom(foregroundColor: Colors.red),
+                          child: const Text("Delete"),
+                        ),
+                      ],
+                    ),
+                  );
+
+                  if (confirm == true) {
+                    try {
+                      final itemsSnapshot = await FirebaseFirestore.instance
+                          .collection('categories')
+                          .doc(selectedCategory!)
+                          .collection('items')
+                          .get();
+
+                      final batch = FirebaseFirestore.instance.batch();
+                      for (final doc in itemsSnapshot.docs) {
+                        batch.delete(doc.reference);
+                      }
+
+                      final categoryRef = FirebaseFirestore.instance.collection('categories').doc(selectedCategory!);
+                      batch.delete(categoryRef);
+
+                      await batch.commit();
+
+                      Navigator.pop(context);
+                      _showSuccessDialog(context, 'Category "$selectedCategory" deleted successfully');
+                    } catch (e) {
+                      _showErrorDialog(context, 'Failed to delete category: ${e.toString()}');
+                    }
+                  }
+                },
+                style: TextButton.styleFrom(foregroundColor: Colors.red),
+                child: const Text("Delete"),
+              ),
+            ],
+          );
+        });
+      },
+    );
+  }
+
+  Widget buildTextField(TextEditingController ctrl, String hint,
+      {TextInputType? inputType, String? errorText}) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: TextField(
+        controller: ctrl,
+        keyboardType: inputType,
+        decoration: InputDecoration(
+          hintText: hint,
+          errorText: errorText,
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+        ),
+      ),
+    );
+  }
+
+  void _showSuccessDialog(BuildContext context, String message) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        Future.delayed(const Duration(seconds: 2), () {
+          if (Navigator.canPop(context)) {
+            Navigator.pop(context);
+          }
+        });
+
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          child: Center(
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 40),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFF6F3D),
+                borderRadius: BorderRadius.circular(25),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.2),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      Icons.check,
+                      color: Colors.white,
+                      size: 16,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Flexible(
+                    child: Text(
+                      message,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showErrorDialog(BuildContext context, String message) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        Future.delayed(const Duration(seconds: 3), () {
+          if (Navigator.canPop(context)) {
+            Navigator.pop(context);
+          }
+        });
+
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          child: Center(
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 40),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              decoration: BoxDecoration(
+                color: Colors.red,
+                borderRadius: BorderRadius.circular(25),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.2),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      Icons.error_outline,
+                      color: Colors.white,
+                      size: 16,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Flexible(
+                    child: Text(
+                      message,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class MenuImageItem extends StatelessWidget {
+  final String imagePath;
+  final String label;
+  const MenuImageItem({super.key, required this.imagePath, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: () {
+        if (label == 'Dashboard') {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const DashboardPage()),
+          );
+        } else if (label == 'Items') {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const ItemPage()),
+          );
+        } else if (label == 'Item In') {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const ItemInPage()),
+          );
+        } else if(label == 'Item Out') {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const ItemOutPage()),
+          );
+        } else if(label == 'History') {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const HistoryPage()),
+          );
+        }
+      },
+      child: Container(
+        height: 90,
+        width: 90,
+        decoration: BoxDecoration(
+          color: const Color(0xFFF1F1F1),
+          borderRadius: BorderRadius.circular(15),
+          boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 2, offset: Offset(1, 2))],
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Image.asset(imagePath, height: 55, width: 55),
+            const SizedBox(height: 2),
+            Text(label, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w500)),
+          ],
+        ),
+      ),
+    );
+  }
+}
