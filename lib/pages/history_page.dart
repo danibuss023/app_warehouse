@@ -15,7 +15,7 @@ class HistoryPage extends StatefulWidget {
 
 class _HistoryPageState extends State<HistoryPage> {
   String selectedFilter = 'All';
-  final List<String> filterOptions = ['All', 'Item In', 'Item Out', 'Item Added', 'Item Deleted'];
+  final List<String> filterOptions = ['All', 'Barang masuk', 'Barang keluar', 'Barang baru', 'Barang dihapus'];
 
   List<DocumentSnapshot> _filterDocuments(List<DocumentSnapshot> docs) {
     if (selectedFilter == 'All') {
@@ -29,13 +29,13 @@ class _HistoryPageState extends State<HistoryPage> {
       String action = data['action'] ?? '';
       
       switch (selectedFilter) {
-        case 'Item In':
+        case 'Barang masuk':
           return action == 'item_in';
-        case 'Item Out':
+        case 'Barang keluar':
           return action == 'item_out';
-        case 'Item Added':
+        case 'Barang baru':
           return action == 'item_added';
-        case 'Item Deleted':
+        case 'Barang dihapus':
           return action == 'item_deleted';
         default:
           return false;
@@ -48,33 +48,33 @@ class _HistoryPageState extends State<HistoryPage> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Generate Report'),
-          content: const Text('Select the time period for the item in/out report:'),
+          title: const Text('Unduh Laporan'),
+          content: const Text('Pilih periode laporan sesuai kebutuhanmu:'),
           actions: [
             TextButton(
               onPressed: () {
                 Navigator.pop(context);
                 _generateReport('daily');
               },
-              child: const Text('Daily'),
+              child: const Text('Hari'),
             ),
             TextButton(
               onPressed: () {
                 Navigator.pop(context);
                 _generateReport('weekly');
               },
-              child: const Text('Weekly'),
+              child: const Text('Minggu'),
             ),
             TextButton(
               onPressed: () {
                 Navigator.pop(context);
                 _generateReport('monthly');
               },
-              child: const Text('Monthly'),
+              child: const Text('Bulan'),
             ),
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
+              child: const Text('Batal'),
             ),
           ],
         );
@@ -92,7 +92,7 @@ class _HistoryPageState extends State<HistoryPage> {
             children: [
               CircularProgressIndicator(),
               SizedBox(width: 20),
-              Text('Generating report...'),
+              Text('Membuat Laporan...'),
             ],
           ),
         ),
@@ -171,13 +171,13 @@ class _HistoryPageState extends State<HistoryPage> {
     final buffer = StringBuffer();
     
     // Header
-    buffer.writeln('INVENTORY REPORT - ${period.toUpperCase()}');
-    buffer.writeln('Period: ${DateFormat('dd MMM yyyy').format(startDate)} - ${DateFormat('dd MMM yyyy').format(endDate)}');
-    buffer.writeln('Generated: ${DateFormat('dd MMM yyyy HH:mm').format(DateTime.now())}');
+    buffer.writeln('REPORT - ${period.toUpperCase()}');
+    buffer.writeln('Periode: ${DateFormat('dd MMM yyyy').format(startDate)} - ${DateFormat('dd MMM yyyy').format(endDate)}');
+    buffer.writeln('Dibuat: ${DateFormat('dd MMM yyyy HH:mm').format(DateTime.now())}');
     buffer.writeln('');
     
     // CSV Headers
-    buffer.writeln('Date,Time,Action,SKU,Item Name,Brand,Category,Amount,Previous Stock,New Stock,User,Description');
+    buffer.writeln('Date,Time,Action,SKU,Nama Barang,Merek,Kategori,Jumlah,Stok lama,Stok baru,User,Deskripsi');
     
     // Data
     for (final doc in docs) {
@@ -205,7 +205,7 @@ class _HistoryPageState extends State<HistoryPage> {
     
     // Summary
     buffer.writeln('');
-    buffer.writeln('SUMMARY');
+    buffer.writeln('Ringkasan');
     
     final itemInCount = docs.where((doc) => (doc.data() as Map)['action'] == 'item_in').length;
     final itemOutCount = docs.where((doc) => (doc.data() as Map)['action'] == 'item_out').length;
@@ -216,11 +216,11 @@ class _HistoryPageState extends State<HistoryPage> {
         .where((doc) => (doc.data() as Map)['action'] == 'item_out')
         .fold(0, (sum, doc) => sum + ((doc.data() as Map)['amount'] as int? ?? 0));
     
-    buffer.writeln('Total Item In Transactions,$itemInCount');
-    buffer.writeln('Total Item Out Transactions,$itemOutCount');
-    buffer.writeln('Total Items In,$totalItemIn');
-    buffer.writeln('Total Items Out,$totalItemOut');
-    buffer.writeln('Net Movement,${totalItemIn - totalItemOut}');
+    buffer.writeln('Jumlah transaksi barang masuk,$itemInCount');
+    buffer.writeln('Jumlah transaksi barang keluar,$itemOutCount');
+    buffer.writeln('Jumlah barang masuk,$totalItemIn');
+    buffer.writeln('Jumlah barang keluar,$totalItemOut');
+    buffer.writeln('Selisih barang masuk dan barang keluar,${totalItemIn - totalItemOut}');
     
     return buffer.toString();
   }
@@ -228,9 +228,9 @@ class _HistoryPageState extends State<HistoryPage> {
   String _getActionLabel(String action) {
     switch (action) {
       case 'item_in':
-        return 'Item In';
+        return 'Barang masuk';
       case 'item_out':
-        return 'Item Out';
+        return 'Barang keluar';
       default:
         return action;
     }
@@ -246,7 +246,7 @@ class _HistoryPageState extends State<HistoryPage> {
   Future<String?> _saveReportToFile(String content, String period) async {
     try {
       final now = DateTime.now();
-      final filename = 'inventory_report_${period}_${DateFormat('yyyyMMdd_HHmmss').format(now)}.csv';
+      final filename = 'Report_warehouse_${period}_${DateFormat('yyyyMMdd_HHmmss').format(now)}.csv';
       
       Directory? directory;
       if (Platform.isAndroid) {
@@ -256,7 +256,7 @@ class _HistoryPageState extends State<HistoryPage> {
             directory = downloadsDir;
           }
         } catch (e) {
-          print('Failed to access Downloads folder: $e');
+          print('Gagal mengakses folder Downloads: $e');
         }
         
         if (directory == null) {
@@ -618,79 +618,132 @@ class HistoryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
       child: Padding(
         padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Row(
           children: [
-            Row(
-              children: [
-                _getActionIcon(),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        _getActionTitle(),
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                      ),
-                      Text(
-                        _formatTimestamp(),
-                        style: TextStyle(
-                          color: Colors.grey[600],
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                _getActionChip(),
-              ],
-            ),
-            const SizedBox(height: 12),
             Container(
-              padding: const EdgeInsets.all(12),
+              width: 60,
+              height: 60,
               decoration: BoxDecoration(
-                color: Colors.grey[50],
-                borderRadius: BorderRadius.circular(8),
+                color: _getBackgroundColor(),
+                borderRadius: BorderRadius.circular(16),
               ),
+              child: Center(
+                child: Image.asset(
+                  _getActionImage(),
+                  width: 40,
+                  height: 40,
+                  fit: BoxFit.contain,
+                  errorBuilder: (context, error, stackTrace) {
+                    // Fallback to icon if image not found
+                    return Icon(
+                      _getActionIconData(),
+                      color: _getIconColor(),
+                      size: 36,
+                    );
+                  },
+                ),
+              ),
+            ),
+            
+            const SizedBox(width: 16),
+            
+            Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildInfoRow('SKU', itemSku),
-                  _buildInfoRow('Item', itemName),
-                  _buildInfoRow('Merk', itemMerk),
-                  _buildInfoRow('Category', category),
-                  if (action == 'item_in' || action == 'item_out')
-                    _buildAmountInfo()
-                  else
-                    _buildInfoRow('Amount', amount.toString()),
-                  if (description.isNotEmpty)
-                    _buildInfoRow('Description', description),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _getActionTitle(),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 18,
+                                color: Colors.black,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Row(
+                              children: [
+                                Text(
+                                  _formatTimestamp(),
+                                  style: const TextStyle(
+                                    color: Colors.black87,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                               Container(
+                                  width: 12,
+                                  height: 12,
+                                  decoration: BoxDecoration(
+                                    color: Color.fromARGB(255, 109, 109, 109).withOpacity(0.1),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(
+                                    Icons.access_time,
+                                    size: 12,
+                                    color: Color.fromARGB(255, 109, 109, 109),
+                                  ),
+                                )
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.person,
+                            size: 16,
+                            color: const Color.fromARGB(255, 90, 90, 90),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'By : ${userEmail.split('@').first}',
+                            style: const TextStyle(
+                              color: const Color.fromARGB(255, 90, 90, 90),
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildInfoRow('SKU', itemSku),
+                      _buildInfoRow('Nama', itemName),
+                      // _buildInfoRow('Kategori', category),
+                      _buildAmountRow(),
+                      if (description.isNotEmpty)
+                        _buildInfoRow('Deskripsi', description.isEmpty ? '---' : description),
+                    ],
+                  ),
                 ],
               ),
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Icon(Icons.person, size: 16, color: Colors.grey[600]),
-                const SizedBox(width: 4),
-                Text(
-                  'By: ${userEmail.split('@').first}',
-                  style: TextStyle(
-                    color: Colors.grey[600],
-                    fontSize: 12,
-                  ),
-                ),
-              ],
             ),
           ],
         ),
@@ -698,137 +751,37 @@ class HistoryCard extends StatelessWidget {
     );
   }
 
-  Widget _getActionIcon() {
-    switch (action) {
-      case 'item_in':
-        return Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: Colors.green[100],
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Icon(Icons.arrow_downward, color: Colors.green[700], size: 20),
-        );
-      case 'item_out':
-        return Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: Colors.red[100],
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Icon(Icons.arrow_upward, color: Colors.red[700], size: 20),
-        );
-      case 'item_added':
-        return Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: Colors.blue[100],
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Icon(Icons.add, color: Colors.blue[700], size: 20),
-        );
-      case 'item_deleted':
-        return Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: Colors.orange[100],
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Icon(Icons.delete, color: Colors.orange[700], size: 20),
-        );
-      default:
-        return Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: Colors.grey[100],
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Icon(Icons.info, color: Colors.grey[700], size: 20),
-        );
-    }
-  }
-
-  Widget _getActionChip() {
-    Color chipColor;
-    switch (action) {
-      case 'item_in':
-        chipColor = Colors.green;
-        break;
-      case 'item_out':
-        chipColor = Colors.red;
-        break;
-      case 'item_added':
-        chipColor = Colors.blue;
-        break;
-      case 'item_deleted':
-        chipColor = Colors.orange;
-        break;
-      default:
-        chipColor = Colors.grey;
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: chipColor.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: chipColor.withOpacity(0.3)),
-      ),
-      child: Text(
-        _getActionTitle(),
-        style: TextStyle(
-          color: chipColor,
-          fontSize: 12,
-          fontWeight: FontWeight.w500,
-        ),
-      ),
-    );
-  }
-
-  String _getActionTitle() {
-    switch (action) {
-      case 'item_in':
-        return 'Item In';
-      case 'item_out':
-        return 'Item Out';
-      case 'item_added':
-        return 'Item Added';
-      case 'item_deleted':
-        return 'Item Deleted';
-      default:
-        return 'Unknown Action';
-    }
-  }
-
-  String _formatTimestamp() {
-    if (timestamp == null) return 'Unknown time';
-    final date = timestamp!.toDate();
-    return DateFormat('dd MMM yyyy, HH:mm').format(date);
-  }
-
   Widget _buildInfoRow(String label, String value) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
+      padding: const EdgeInsets.only(bottom: 3),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            width: 80,
+            width: 70,
             child: Text(
-              '$label:',
-              style: TextStyle(
-                color: Colors.grey[600],
+              label,
+              style: const TextStyle(
                 fontSize: 12,
+                color: Colors.black87,
                 fontWeight: FontWeight.w500,
               ),
             ),
           ),
+          const Text(
+            ': ',
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.black87,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
           Expanded(
             child: Text(
-              value,
+              value.isEmpty ? '---' : value,
               style: const TextStyle(
                 fontSize: 12,
-                fontWeight: FontWeight.w600,
+                color: Colors.black87,
               ),
             ),
           ),
@@ -837,42 +790,139 @@ class HistoryCard extends StatelessWidget {
     );
   }
 
-  Widget _buildAmountInfo() {
+  Widget _buildAmountRow() {
+    String amountText;
     if (action == 'item_in' || action == 'item_out') {
-      return Padding(
-        padding: const EdgeInsets.only(bottom: 4),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SizedBox(
-              width: 80,
-              child: Text(
-                'Amount:',
-                style: TextStyle(
-                  color: Colors.grey[600],
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ),
-            Expanded(
-              child: Text(
-                '${previousAmount ?? 0} → ${newAmount ?? 0} (${action == 'item_in' ? '+' : '-'}$amount)',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: action == 'item_in' ? Colors.green[700] : Colors.red[700],
-                ),
-              ),
-            ),
-          ],
-        ),
-      );
+      if (previousAmount != null && newAmount != null) {
+        amountText = '$previousAmount → $newAmount (${action == 'item_in' ? '+' : '-'}${amount})';
+      } else {
+        amountText = amount.toString();
+      }
+    } else {
+      amountText = amount.toString();
     }
-    return _buildInfoRow('Amount', amount.toString());
+    
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 3),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SizedBox(
+            width: 70,
+            child: Text(
+              'Jumlah',
+              style: TextStyle(
+                fontSize: 13,
+                color: Colors.black87,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+          const Text(
+            ': ',
+            style: TextStyle(
+              fontSize: 13,
+              color: Colors.black87,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          Expanded(
+            child: Text(
+              amountText,
+              style: TextStyle(
+                fontSize: 13,
+                color: (action == 'item_in' || action == 'item_out') ? 
+                       (action == 'item_in' ? Colors.green[700] : Colors.red[700]) : 
+                       Colors.black87,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _getActionImage() {
+    switch (action) {
+      case 'item_in':
+        return 'src/in.png';
+      case 'item_out':
+        return 'src/out.png'; 
+      case 'item_added':
+        return 'src/addd.png'; 
+      case 'item_deleted':
+        return 'assets/images/item_deleted.png'; 
+      default:
+        return 'assets/images/default_action.png';
+    }
+  }
+
+  Color _getBackgroundColor() {
+    switch (action) {
+      case 'item_in':
+        return Colors.green.withOpacity(0.2); // Green transparent for item in
+      case 'item_out':
+        return Colors.red.withOpacity(0.2); // Red transparent for item out
+      case 'item_added':
+        return Colors.blue.withOpacity(0.2); // Blue transparent for item added
+      case 'item_deleted':
+        return Colors.orange.withOpacity(0.2); // Orange transparent for item deleted
+      default:
+        return Colors.grey.withOpacity(0.2); // Grey transparent for default
+    }
+  }
+
+  Color _getIconColor() {
+    switch (action) {
+      case 'item_in':
+        return Colors.green[700]!;
+      case 'item_out':
+        return Colors.red[700]!;
+      case 'item_added':
+        return Colors.blue[700]!;
+      case 'item_deleted':
+        return Colors.orange[700]!;
+      default:
+        return Colors.grey[700]!;
+    }
+  }
+
+  IconData _getActionIconData() {
+    switch (action) {
+      case 'item_in':
+        return Icons.arrow_downward_rounded;
+      case 'item_out':
+        return Icons.arrow_upward_rounded;
+      case 'item_added':
+        return Icons.add_rounded;
+      case 'item_deleted':
+        return Icons.delete_rounded;
+      default:
+        return Icons.inventory_rounded;
+    }
+  }
+
+  String _getActionTitle() {
+    switch (action) {
+      case 'item_in':
+        return 'Barang masuk';
+      case 'item_out':
+        return 'Barang keluar';
+      case 'item_added':
+        return 'Barang baru';
+      case 'item_deleted':
+        return 'Barang dihapus';
+      default:
+        return 'Aksi tidak dikenal';
+    }
+  }
+
+  String _formatTimestamp() {
+    if (timestamp == null) return 'Waktu tidak diketahui';
+    final date = timestamp!.toDate();
+    return DateFormat('dd MMM yyyy HH:mm').format(date);
   }
 }
-
 class HistoryHelper {
   static Future<void> addHistoryEntry({
     required String action,

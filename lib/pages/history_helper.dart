@@ -56,15 +56,15 @@ class HistoryHelper {
   static String getActionLabel(String action) {
     switch (action) {
       case 'item_added':
-        return 'Item Added';
+        return 'Barang baru';
       case 'item_updated':
         return 'Item Updated';
       case 'item_deleted':
-        return 'Item Deleted';
+        return 'Barang dihapus';
       case 'item_in':
-        return 'Item In';
+        return 'Barang masuk';
       case 'item_out':
-        return 'Item Out';
+        return 'Barang keluar';
       case 'category_added':
         return 'Category Created';
       case 'category_deleted':

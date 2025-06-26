@@ -107,7 +107,7 @@ class _ItemInPageState extends State<ItemInPage> with TickerProviderStateMixin {
                     children: [
                       Icon(Icons.arrow_back, color: Colors.white, size: 16),
                       SizedBox(width: 4),
-                      Text('Back', style: TextStyle(color: Colors.white, fontSize: 12)),
+                      Text('Kembali', style: TextStyle(color: Colors.white, fontSize: 12)),
                     ],
                   ),
                 ),
@@ -115,7 +115,7 @@ class _ItemInPageState extends State<ItemInPage> with TickerProviderStateMixin {
               const Expanded(
                 child: Center(
                   child: Text(
-                    'Items In',
+                    'Barang masuk',
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 18,
@@ -143,7 +143,7 @@ class _ItemInPageState extends State<ItemInPage> with TickerProviderStateMixin {
           });
         },
         decoration: InputDecoration(
-          hintText: 'search',
+          hintText: 'cari',
           hintStyle: TextStyle(color: Colors.grey[500], fontSize: 16),
           prefixIcon: Icon(Icons.search, color: Colors.grey[500]),
           filled: true,
@@ -169,7 +169,7 @@ class _ItemInPageState extends State<ItemInPage> with TickerProviderStateMixin {
               children: [
                 Icon(Icons.error_outline, size: 48, color: Colors.red[300]),
                 const SizedBox(height: 16),
-                Text('Error loading items: ${categoriesSnapshot.error}'),
+                Text('Terjadi kesalahan saat memuat data: ${categoriesSnapshot.error}'),
                 const SizedBox(height: 16),
                 ElevatedButton(
                   onPressed: () => setState(() {}),
@@ -192,7 +192,7 @@ class _ItemInPageState extends State<ItemInPage> with TickerProviderStateMixin {
                 Icon(Icons.inventory_2_outlined, size: 48, color: Colors.grey[400]),
                 const SizedBox(height: 16),
                 Text(
-                  'No categories found',
+                  'Data tidak ditemukan',
                   style: TextStyle(
                     color: Colors.grey[600],
                     fontSize: 16,
@@ -213,7 +213,7 @@ class _ItemInPageState extends State<ItemInPage> with TickerProviderStateMixin {
                   children: [
                     Icon(Icons.error_outline, size: 48, color: Colors.red[300]),
                     const SizedBox(height: 16),
-                    Text('Error loading items: ${itemsSnapshot.error}'),
+                    Text('Terjadi kesalahan saat memuat data: ${itemsSnapshot.error}'),
                   ],
                 ),
               );
@@ -245,7 +245,7 @@ class _ItemInPageState extends State<ItemInPage> with TickerProviderStateMixin {
                     Icon(Icons.inventory_2_outlined, size: 48, color: Colors.grey[400]),
                     const SizedBox(height: 16),
                     Text(
-                      _searchQuery.isEmpty ? 'No items found' : 'No items match your search',
+                      _searchQuery.isEmpty ? 'Data tidak ditemukan' : 'Tidak ada data yang cocok dengan pencarian Anda',
                       style: TextStyle(
                         color: Colors.grey[600],
                         fontSize: 16,
@@ -254,7 +254,7 @@ class _ItemInPageState extends State<ItemInPage> with TickerProviderStateMixin {
                     if (_searchQuery.isNotEmpty) ...[
                       const SizedBox(height: 8),
                       Text(
-                        'Try different keywords',
+                        'Coba kata kunci yang berbeda',
                         style: TextStyle(
                           color: Colors.grey[500],
                           fontSize: 14,
@@ -506,7 +506,7 @@ class ItemInCard extends StatelessWidget {
         child: Row(
           children: [
 
-            Container(
+            SizedBox(
               width: 48,
               height: 48,
               child: Center(
@@ -568,7 +568,7 @@ class ItemInCard extends StatelessWidget {
 
             GestureDetector(
               onTap: () => _showAddStockDialog(context),
-              child: Container(
+              child: SizedBox(
                 width: 40,
                 height: 40,
                 child: Center(
@@ -772,7 +772,7 @@ class ItemInCard extends StatelessWidget {
                       children: [
 
                         Expanded(
-                          child: Container(
+                          child: SizedBox(
                             height: 50,
                             child: TextButton(
                               onPressed: isLoading ? null : () => Navigator.pop(context),
@@ -801,7 +801,7 @@ class ItemInCard extends StatelessWidget {
                         
 
                         Expanded(
-                          child: Container(
+                          child: SizedBox(
                             height: 50,
                             child: ElevatedButton(
                               onPressed: isLoading ? null : () async {
@@ -1101,7 +1101,7 @@ Future<void> _showCenterNotification(BuildContext context, int addAmount) async 
                             children: [
 
                               Expanded(
-                                child: Container(
+                                child: SizedBox(
                                   height: 45,
                                   child: TextButton(
                                     onPressed: () {
@@ -1135,7 +1135,7 @@ Future<void> _showCenterNotification(BuildContext context, int addAmount) async 
                               
 
                               Expanded(
-                                child: Container(
+                                child: SizedBox(
                                   height: 45,
                                   child: ElevatedButton(
                                     onPressed: () {
@@ -1213,7 +1213,7 @@ Future<void> _showCenterNotification(BuildContext context, int addAmount) async 
       },
     );
     
-    autoTimer?.cancel();
+    autoTimer.cancel();
     print('DEBUG: Notification process completed');
     
   } catch (e) {

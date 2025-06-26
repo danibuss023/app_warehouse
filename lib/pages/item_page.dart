@@ -17,6 +17,7 @@ class _ItemPageState extends State<ItemPage> with TickerProviderStateMixin {
   List<Map<String, dynamic>> filteredItems = [];
   TextEditingController searchController = TextEditingController();
   bool _isRefreshing = false;
+  bool _isInitialLoading = true; // Tambahkan ini
 
 
   late AnimationController _loadingAnimationController;
@@ -62,6 +63,7 @@ class _ItemPageState extends State<ItemPage> with TickerProviderStateMixin {
     
     loadCategories();
     loadAllItems();
+    _initializeData();
     searchController.addListener(_filterItems);
   }
 
@@ -73,6 +75,22 @@ class _ItemPageState extends State<ItemPage> with TickerProviderStateMixin {
     super.dispose();
   }
 
+ Future<void> _initializeData() async {
+    setState(() {
+      _isInitialLoading = true;
+    });
+    
+    await Future.delayed(const Duration(milliseconds: 500)); // Delay untuk animasi
+    
+    await loadCategories();
+    await loadAllItems();
+    
+    if (mounted) {
+      setState(() {
+        _isInitialLoading = false;
+      });
+    }
+  }
   Future<void> loadCategories() async {
     try {
       final snapshot = await FirebaseFirestore.instance.collection('categories').get();
@@ -134,7 +152,7 @@ class _ItemPageState extends State<ItemPage> with TickerProviderStateMixin {
   }
 
 
-  Future<void> _handleRefresh() async {
+ Future<void> _handleRefresh() async {
     if (_isRefreshing) return;
     
     setState(() {
@@ -142,10 +160,9 @@ class _ItemPageState extends State<ItemPage> with TickerProviderStateMixin {
     });
     
     try {
-
-      await Future.delayed(const Duration(milliseconds: 500));
+      // Delay untuk menunjukkan animasi loading
+      await Future.delayed(const Duration(milliseconds: 800));
       
-
       await loadCategories();
       await loadAllItems();
       
@@ -157,7 +174,6 @@ class _ItemPageState extends State<ItemPage> with TickerProviderStateMixin {
       }
     }
   }
-
 
   String _formatDate(dynamic dateValue) {
     if (dateValue == null) return 'N/A';
@@ -254,7 +270,7 @@ class _ItemPageState extends State<ItemPage> with TickerProviderStateMixin {
                     children: [
                       Icon(Icons.arrow_back, color: Colors.white, size: 16),
                       SizedBox(width: 4),
-                      Text('Back', style: TextStyle(color: Colors.white, fontSize: 12)),
+                      Text('Kembali', style: TextStyle(color: Colors.white, fontSize: 12)),
                     ],
                   ),
                 ),
@@ -262,7 +278,7 @@ class _ItemPageState extends State<ItemPage> with TickerProviderStateMixin {
               const Expanded(
                 child: Center(
                   child: Text(
-                    'Items',
+                    'Barang',
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 18,
@@ -288,7 +304,7 @@ class _ItemPageState extends State<ItemPage> with TickerProviderStateMixin {
             child: TextField(
               controller: searchController,
               decoration: InputDecoration(
-                hintText: 'search by sku or name',
+                hintText: 'cari berdasarkan sku atau nama',
                 hintStyle: TextStyle(color: Colors.grey[500]),
                 prefixIcon: Icon(Icons.search, color: Colors.grey[500]),
                 filled: true,
@@ -302,7 +318,7 @@ class _ItemPageState extends State<ItemPage> with TickerProviderStateMixin {
             ),
           ),
           const SizedBox(width: 15),
-          Container(
+          SizedBox(
             width: 110,
             child: DropdownButtonFormField<String>(
               value: selectedCategory,
@@ -347,38 +363,108 @@ class _ItemPageState extends State<ItemPage> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildItemsList() {
-
-    if (allItems.isEmpty && !_isRefreshing) {
+ Widget _buildItemsList() {
+    // Jika initial loading
+    if (_isInitialLoading) {
+      return _buildAnimatedLoadingWidget();
+    }
+    
+    // Jika masih loading refresh dan belum ada data
+    if (allItems.isEmpty && _isRefreshing) {
       return _buildAnimatedLoadingWidget();
     }
 
-    if (filteredItems.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.inventory_2_outlined, size: 48, color: Colors.grey[400]),
-            const SizedBox(height: 16),
-            Text(
-              searchController.text.isEmpty ? 'No items found' : 'No items match your search',
-              style: TextStyle(
-                color: Colors.grey[600],
-                fontSize: 16,
-              ),
-            ),
-            if (searchController.text.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              Text(
-                'Try different keywords',
-                style: TextStyle(
-                  color: Colors.grey[500],
-                  fontSize: 14,
+    // Jika tidak ada data sama sekali setelah loading selesai
+    if (allItems.isEmpty && !_isRefreshing) {
+      return TweenAnimationBuilder<double>(
+        duration: const Duration(milliseconds: 800),
+        tween: Tween<double>(begin: 0.0, end: 1.0),
+        curve: Curves.easeOutCubic,
+        builder: (context, value, child) {
+          return Transform.translate(
+            offset: Offset(0, 30 * (1 - value)),
+            child: Opacity(
+              opacity: value,
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Transform.scale(
+                      scale: value,
+                      child: Icon(Icons.inventory_2_outlined, size: 64, color: Colors.grey[400]),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Data tidak ditemukan',
+                      style: TextStyle(
+                        color: Colors.grey[600],
+                        fontSize: 18,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ],
-          ],
-        ),
+            ),
+          );
+        },
+      );
+    }
+
+    // Jika ada data tapi hasil filter kosong
+    if (filteredItems.isEmpty) {
+      return TweenAnimationBuilder<double>(
+        duration: const Duration(milliseconds: 600),
+        tween: Tween<double>(begin: 0.0, end: 1.0),
+        curve: Curves.easeOutBack,
+        builder: (context, value, child) {
+          return Transform.translate(
+            offset: Offset(0, 20 * (1 - value)),
+            child: Opacity(
+              opacity: value,
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Transform.scale(
+                      scale: 0.8 + (0.2 * value),
+                      child: Icon(Icons.search_off, size: 64, color: Colors.grey[400]),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Data tidak ditemukan',
+                      style: TextStyle(
+                        color: Colors.grey[600],
+                        fontSize: 18,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      searchController.text.isEmpty 
+                        ? 'Tidak ada item dalam kategori ini' 
+                        : 'Tidak ada item yang sesuai dengan pencarian',
+                      style: TextStyle(
+                        color: Colors.grey[500],
+                        fontSize: 14,
+                      ),
+                    ),
+                    if (searchController.text.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        'Coba kata kunci yang berbeda',
+                        style: TextStyle(
+                          color: Colors.grey[500],
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
       );
     }
 
@@ -411,7 +497,6 @@ class _ItemPageState extends State<ItemPage> with TickerProviderStateMixin {
       ),
     );
   }
-
 
   Widget _buildAnimatedLoadingWidget() {
     return Center(
@@ -666,7 +751,7 @@ class _ItemPageState extends State<ItemPage> with TickerProviderStateMixin {
                           padding: const EdgeInsets.all(20),
                           child: Row(
                             children: [
-                              Container(
+                              SizedBox(
                                 width: 50,
                                 height: 50,
                                 child: Image.asset(
@@ -994,6 +1079,12 @@ class _ItemPageState extends State<ItemPage> with TickerProviderStateMixin {
         );
       },
     );
+     void dispose() {
+    searchController.dispose();
+    _loadingAnimationController.dispose();
+    _fadeAnimationController.dispose();
+    super.dispose();
+  }
   }
 
 

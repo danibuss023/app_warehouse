@@ -14,9 +14,15 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
   bool isPasswordVisible = false;
+  bool isLoading = false;
   String error = '';
 
   Future<void> login() async {
+    setState(() {
+      isLoading = true;
+      error = '';
+    });
+
     try {
       await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: emailController.text.trim(),
@@ -28,6 +34,10 @@ class _LoginPageState extends State<LoginPage> {
     } catch (e) {
       setState(() {
         error = 'Login gagal. Periksa email dan password.';
+      });
+    } finally {
+      setState(() {
+        isLoading = false;
       });
     }
   }
@@ -62,9 +72,9 @@ class _LoginPageState extends State<LoginPage> {
                   const Text("Pastikan username dan password anda benar!"),
                   const SizedBox(height: 25),
 
-
                   TextFormField(
                     controller: emailController,
+                    enabled: !isLoading,
                     decoration: InputDecoration(
                       labelText: 'email',
                       labelStyle: const TextStyle(color: Color.fromARGB(255, 110, 110, 110)),
@@ -76,9 +86,9 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                   const SizedBox(height: 20),
 
-
                   TextFormField(
                     controller: passwordController,
+                    enabled: !isLoading,
                     obscureText: !isPasswordVisible,
                     decoration: InputDecoration(
                       labelText: 'password',
@@ -89,7 +99,7 @@ class _LoginPageState extends State<LoginPage> {
                           isPasswordVisible ? Icons.visibility : Icons.visibility_off,
                           color: Color.fromARGB(255, 110, 110, 110),
                         ),
-                        onPressed: () {
+                        onPressed: isLoading ? null : () {
                           setState(() {
                             isPasswordVisible = !isPasswordVisible;
                           });
@@ -103,23 +113,55 @@ class _LoginPageState extends State<LoginPage> {
 
                   const SizedBox(height: 25),
 
-
                   SizedBox(
                     width: double.infinity,
                     height: 50,
                     child: ElevatedButton(
-                      onPressed: login,
+                      onPressed: isLoading ? null : login,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFFF6F3D),
+                        backgroundColor: isLoading 
+                          ? const Color(0xFFFF6F3D).withOpacity(0.6)
+                          : const Color(0xFFFF6F3D),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       ),
-                      child: const Text('Masuk', style: TextStyle(color: Colors.white, fontSize: 16)),
+                      child: isLoading
+                        ? Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: const [
+                              SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                ),
+                              ),
+                              SizedBox(width: 10),
+                              Text(
+                                'Masuk...',
+                                style: TextStyle(color: Colors.white, fontSize: 16),
+                              ),
+                            ],
+                          )
+                        : const Text(
+                            'Masuk',
+                            style: TextStyle(color: Colors.white, fontSize: 16),
+                          ),
                     ),
                   ),
 
                   const SizedBox(height: 15),
                   if (error.isNotEmpty)
-                    Center(child: Text(error, style: const TextStyle(color: Colors.red))),
+                    Center(
+                      child: AnimatedOpacity(
+                        opacity: error.isNotEmpty ? 1.0 : 0.0,
+                        duration: const Duration(milliseconds: 300),
+                        child: Text(
+                          error,
+                          style: const TextStyle(color: Colors.red),
+                        ),
+                      ),
+                    ),
                   
                   const SizedBox(height: 30),
                   const Center(child: Text("©2024"))

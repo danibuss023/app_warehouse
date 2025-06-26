@@ -93,7 +93,12 @@ flutter:
   - src/search.png
   - src/trash.png
   - src/decrease.png
-  
+  - src/in.png
+  - src/out.png
+  - src/addd.png
+  - src/add_image.png
+
+
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
 

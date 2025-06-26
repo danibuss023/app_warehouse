@@ -19,6 +19,17 @@ class HomePage extends StatelessWidget {
     Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LoginPage()));
   }
 
+  String getGreeting() {
+    final hour = DateTime.now().hour;
+    if (hour < 12) {
+      return "Hello, Good morning!";
+    } else if (hour < 17) {
+      return "Hello, Good afternoon!";
+    } else {
+      return "Hello, Good evening!";
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
@@ -60,12 +71,12 @@ return Scaffold(
             top: 60, left: 20,
             child: Row(
               children: [
-                const CircleAvatar(backgroundImage: AssetImage('src/avatar.png'), radius: 28),
+                const CircleAvatar(backgroundImage: AssetImage('src/logo.png'), radius: 28),
                 const SizedBox(width: 10),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text("Hello, Good morning!", style: TextStyle(color: Colors.white, fontSize: 14)),
+                    Text(getGreeting(), style: const TextStyle(color: Colors.white, fontSize: 14)),
                     Text(displayName, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
                   ],
                 ),
@@ -80,7 +91,16 @@ return Scaffold(
                 if (value == 'logout') logout(context);
               },
               itemBuilder: (context) => [
-                const PopupMenuItem<String>(value: 'logout', child: Text('Logout')),
+                const PopupMenuItem<String>(
+                  value: 'logout', 
+                  child: Row(
+                    children: [
+                      Icon(Icons.logout, color: Colors.red, size: 20),
+                      SizedBox(width: 8),
+                      Text('Logout'),
+                    ],
+                  ),
+                ),
               ],
             ),
           ),
@@ -98,9 +118,9 @@ return Scaffold(
         alignment: WrapAlignment.start,
         children: const [
           MenuImageItem(imagePath: 'src/dashboard.png', label: 'Dashboard'),
-          MenuImageItem(imagePath: 'src/item.png', label: 'Items'),
-          MenuImageItem(imagePath: 'src/itemin.png', label: 'Item In'),
-          MenuImageItem(imagePath: 'src/itemout.png', label: 'Item Out'),
+          MenuImageItem(imagePath: 'src/item.png', label: 'Barang'),
+          MenuImageItem(imagePath: 'src/itemin.png', label: 'Barang Masuk'),
+          MenuImageItem(imagePath: 'src/itemout.png', label: 'Barang Keluar'),
           MenuImageItem(imagePath: 'src/history.png', label: 'History'),
         ],
       ),
@@ -144,7 +164,7 @@ return Scaffold(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     const Text(
-                      "ADD ITEM",
+                      "TAMBAH BARANG",
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w600,
@@ -160,14 +180,14 @@ return Scaffold(
                     _buildRoundedTextField(merkCtrl, 'MERK', errorText: merkErr),
                     const SizedBox(height: 5),
                     
-                    _buildRoundedTextField(nameCtrl, 'NAME ITEMS', errorText: nameErr),
+                    _buildRoundedTextField(nameCtrl, 'NAMA BARANG', errorText: nameErr),
                     const SizedBox(height: 5),
                     
-                    _buildRoundedTextField(amountCtrl, 'AMOUNT', errorText: amountErr, inputType: TextInputType.number),
+                    _buildRoundedTextField(amountCtrl, 'JUMLAH', errorText: amountErr, inputType: TextInputType.number),
                     const SizedBox(height: 10),
                     
                     const Text(
-                      "Category",
+                      "Kategori",
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w500,
@@ -190,7 +210,7 @@ return Scaffold(
                         child: DropdownButton<String>(
                           value: selectedCategory,
                           hint: const Text(
-                            'Category name',
+                            'Pilih kategori',
                             style: TextStyle(
                               color: Color.fromARGB(255, 126, 126, 126),
                               fontSize: 14,
@@ -243,7 +263,7 @@ return Scaffold(
                             }
                           },
                           child: const Text(
-                            "Add Category +",
+                            "Tambah kategori +",
                             style: TextStyle(
                               color: Color(0xFFFF6F3D),
                               fontSize: 14,
@@ -258,7 +278,7 @@ return Scaffold(
                               loadCategories();
                             },
                             child: const Text(
-                              "Delete Category",
+                              "Hapus Kategori",
                               style: TextStyle(
                                 color: Color.fromARGB(255, 85, 85, 85),
                                 fontSize: 14,
@@ -273,7 +293,7 @@ return Scaffold(
                       children: [
                         // Save Button
                         Expanded(
-                          child: Container(
+                          child: SizedBox(
                             height: 50,
                             child: ElevatedButton(
                               onPressed: () async {
@@ -306,7 +326,7 @@ return Scaffold(
 
                                 final exists = await ref.get();
                                 if (exists.exists) {
-                                  setState(() => skuErr = 'SKU already used');
+                                  setState(() => skuErr = 'SKU sudah digunakan');
                                   return;
                                 }
 
@@ -343,7 +363,7 @@ return Scaffold(
                                 elevation: 0,
                               ),
                               child: const Text(
-                                "Save",
+                                "Simpan",
                                 style: TextStyle(
                                   color: Colors.white,
                                   fontSize: 16,
@@ -357,7 +377,7 @@ return Scaffold(
                         const SizedBox(width: 16),
                         
                         Expanded(
-                          child: Container(
+                          child: SizedBox(
                             height: 50,
                             child: ElevatedButton(
                               onPressed: () => Navigator.pop(context),
@@ -369,7 +389,7 @@ return Scaffold(
                                 elevation: 0,
                               ),
                               child: const Text(
-                                "Cancel",
+                                "Batal",
                                 style: TextStyle(
                                   color: Colors.white,
                                   fontSize: 16,
@@ -755,17 +775,17 @@ class MenuImageItem extends StatelessWidget {
             context,
             MaterialPageRoute(builder: (context) => const DashboardPage()),
           );
-        } else if (label == 'Items') {
+        } else if (label == 'Barang') {
           Navigator.push(
             context,
             MaterialPageRoute(builder: (context) => const ItemPage()),
           );
-        } else if (label == 'Item In') {
+        } else if (label == 'Barang Masuk') {
           Navigator.push(
             context,
             MaterialPageRoute(builder: (context) => const ItemInPage()),
           );
-        } else if(label == 'Item Out') {
+        } else if(label == 'Barang Keluar') {
           Navigator.push(
             context,
             MaterialPageRoute(builder: (context) => const ItemOutPage()),
