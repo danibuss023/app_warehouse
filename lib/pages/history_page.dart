@@ -403,77 +403,62 @@ class _HistoryPageState extends State<HistoryPage> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: Colors.grey[110],
               boxShadow: [
-                BoxShadow(
-                  color: Colors.grey.withOpacity(0.1),
-                  spreadRadius: 1,
-                  blurRadius: 3,
-                  offset: const Offset(0, 1),
-                ),
+                // BoxShadow(
+                //   color: Colors.grey.withOpacity(0.1),
+                //   spreadRadius: 1,
+                //   blurRadius: 3,
+                //   offset: const Offset(0, 1),
+                // ),
               ],
             ),
             child: Column(
-              children: [
-                Row(
-                  children: [
-                    const Text(
-                      'Filter: ', 
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
-                    Expanded(
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.grey[300]!),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: DropdownButton<String>(
-                          value: selectedFilter,
-                          isExpanded: true,
-                          underline: const SizedBox(),
-                          items: filterOptions.map((String value) {
-                            return DropdownMenuItem<String>(
-                              value: value,
-                              child: Text(
-                                value,
-                                style: const TextStyle(fontSize: 14),
-                              ),
-                            );
-                          }).toList(),
-                          onChanged: (String? newValue) {
-                            if (newValue != null) {
-                              setState(() {
-                                selectedFilter = newValue;
-                              });
-                            }
-                          },
-                        ),
-                      ),
-                    ),
-                  ],
+  children: [
+    Row(
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: [
+        const Text(
+          'Filter: ', 
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 16,
+          ),
+        ),
+        Container(
+          width: 100, 
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            border: Border.all(color: Colors.white),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: DropdownButton<String>(
+            value: selectedFilter,
+            isExpanded: true,
+            underline: const SizedBox(),
+            items: filterOptions.map((String value) {
+              return DropdownMenuItem<String>(
+                value: value,
+                child: Text(
+                  value,
+                  style: const TextStyle(fontSize: 14),
                 ),
-                const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: _showReportDialog,
-                    icon: const Icon(Icons.download, color: Colors.white),
-                    label: const Text('Generate Report', style: TextStyle(color: Colors.white)),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFFF6F3D),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
+              );
+            }).toList(),
+            onChanged: (String? newValue) {
+              if (newValue != null) {
+                setState(() {
+                  selectedFilter = newValue;
+                });
+              }
+            },
+          ),
+        ),
+      ],
+    ),
+  ],
+),
           ),
 
           Expanded(
@@ -862,13 +847,13 @@ class HistoryCard extends StatelessWidget {
       case 'item_in':
         return Colors.green.withOpacity(0.2); // Green transparent for item in
       case 'item_out':
-        return Colors.red.withOpacity(0.2); // Red transparent for item out
+        return Colors.red.withOpacity(0.2);
       case 'item_added':
-        return Colors.blue.withOpacity(0.2); // Blue transparent for item added
+        return Colors.blue.withOpacity(0.2); 
       case 'item_deleted':
-        return Colors.orange.withOpacity(0.2); // Orange transparent for item deleted
+        return Colors.orange.withOpacity(0.2); 
       default:
-        return Colors.grey.withOpacity(0.2); // Grey transparent for default
+        return Colors.grey.withOpacity(0.2); 
     }
   }
 

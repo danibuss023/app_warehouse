@@ -38,19 +38,19 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyBDExcpJPbnRkSf5Pt6gstPIeX5TsvhMlg',
-    appId: '1:553829016472:android:84134ef184936c3c1741ed',
-    messagingSenderId: '553829016472',
-    projectId: 'app-warehouse-1cee6',
-    storageBucket: 'app-warehouse-1cee6.firebasestorage.app',
+    apiKey: 'AIzaSyACxlc2PWN92qI9L015_xB_hSCj3ye9fa8',
+    appId: '1:766645636867:android:4517659136d2a25e4fe336',
+    messagingSenderId: '766645636867',
+    projectId: 'app-warehouse-55797',
+    storageBucket: 'app-warehouse-55797.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyBDExcpJPbnRkSf5Pt6gstPIeX5TsvhMlg',
-    appId: '1:553829016472:ios:84134ef184936c3c1741ed',
-    messagingSenderId: '553829016472',
-    projectId: 'app-warehouse-1cee6',
-    storageBucket: 'app-warehouse-1cee6.firebasestorage.app',
-    iosBundleId: 'com.example.appWarehouse',
+    apiKey: 'AIzaSyACxlc2PWN92qI9L015_xB_hSCj3ye9fa8',
+    appId: '1:766645636867:ios:4517659136d2a25e4fe336',
+    messagingSenderId: '766645636867',
+    projectId: 'app-warehouse-55797',
+    storageBucket: 'app-warehouse-55797.firebasestorage.app',
+    iosBundleId: 'com.example.app_warehouse',
   );
 }

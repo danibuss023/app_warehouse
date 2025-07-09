@@ -105,34 +105,80 @@ class _ItemPageState extends State<ItemPage> with TickerProviderStateMixin {
     }
   }
 
-  Future<void> loadAllItems() async {
-    try {
-      final categoriesSnapshot = await FirebaseFirestore.instance.collection('categories').get();
-      List<Map<String, dynamic>> items = [];
+Future<void> loadAllItems() async {
+  try {
+    final categoriesSnapshot = await FirebaseFirestore.instance.collection('categories').get();
+    List<Map<String, dynamic>> items = [];
 
-      for (var categoryDoc in categoriesSnapshot.docs) {
-        final itemsSnapshot = await categoryDoc.reference.collection('items').get();
+    for (var categoryDoc in categoriesSnapshot.docs) {
+      final itemsSnapshot = await categoryDoc.reference.collection('items').get();
+      
+      for (var itemDoc in itemsSnapshot.docs) {
+        final itemData = itemDoc.data();
         
-        for (var itemDoc in itemsSnapshot.docs) {
-          final itemData = itemDoc.data();
-          items.add({
-            ...itemData,
-            'category': categoryDoc.id,
-            'docId': itemDoc.id,
-          });
-        }
-      }
-
-      if (mounted) {
-        setState(() {
-          allItems = items;
-          filteredItems = items;
+        // Ambil data history berdasarkan SKU
+        final historyData = await _getItemHistoryData(itemData['sku'] ?? '');
+        
+        items.add({
+          ...itemData,
+          'category': categoryDoc.id,
+          'docId': itemDoc.id,
+          // Override dengan data dari history
+          'dateAdded': historyData['dateAdded'],
+          'lastModified': historyData['lastModified'],
+          'editedBy': historyData['editedBy'],
         });
       }
-    } catch (e) {
-      print('Error loading items: $e');
     }
+
+    if (mounted) {
+      setState(() {
+        allItems = items;
+        filteredItems = items;
+      });
+    }
+  } catch (e) {
+    print('Error loading items: $e');
   }
+}
+
+Future<Map<String, dynamic>> _getItemHistoryData(String sku) async {
+  try {
+    // Ambil history berdasarkan SKU, diurutkan berdasarkan timestamp
+    final historySnapshot = await FirebaseFirestore.instance
+        .collection('history')
+        .where('itemSku', isEqualTo: sku)
+        .orderBy('timestamp', descending: false)
+        .get();
+
+    if (historySnapshot.docs.isEmpty) {
+      return {
+        'dateAdded': null,
+        'lastModified': null,
+        'editedBy': null,
+      };
+    }
+
+    // Ambil entry pertama (tanggal masuk)
+    final firstEntry = historySnapshot.docs.first.data();
+    
+    // Ambil entry terakhir (terakhir edit)
+    final lastEntry = historySnapshot.docs.last.data();
+
+    return {
+      'dateAdded': firstEntry['timestamp'],
+      'lastModified': lastEntry['timestamp'],
+      'editedBy': lastEntry['editedBy'] ?? 'Unknown',
+    };
+  } catch (e) {
+    print('Error getting history data: $e');
+    return {
+      'dateAdded': null,
+      'lastModified': null,
+      'editedBy': null,
+    };
+  }
+}
 
   void _filterItems() {
     final query = searchController.text.toLowerCase();
