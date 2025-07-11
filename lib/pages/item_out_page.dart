@@ -488,6 +488,12 @@ class ItemOutCard extends StatelessWidget {
     required this.onStockRemoved,
   });
 
+  // Helper function to get item image URL from Cloudinary
+  String getItemImageUrl(String itemId) {
+    const String cloudName = "do0v30ppn";
+    return 'https://res.cloudinary.com/$cloudName/image/upload/w_96,h_96,c_fill,q_auto/inventory_items/item_$itemId';
+  }
+
   @override
   Widget build(BuildContext context) {
     final String sku = itemData['sku'] ?? '';
@@ -512,21 +518,58 @@ class ItemOutCard extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         child: Row(
           children: [
-
-            SizedBox(
+            // Item image from Cloudinary (Updated from local asset)
+            Container(
               width: 48,
               height: 48,
-              child: Center(
-                child: Image.asset(
-                  'src/item.png',
-                  width: 55,
-                  height: 55,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(8),
+                color: Colors.grey[100],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Image.network(
+                  getItemImageUrl(sku), // Use SKU as item ID
+                  width: 48,
+                  height: 48,
+                  fit: BoxFit.cover,
+                  loadingBuilder: (context, child, loadingProgress) {
+                    if (loadingProgress == null) return child;
+                    return Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[200],
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Center(
+                        child: SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.grey[400]!,
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
                   errorBuilder: (context, error, stackTrace) {
-
-                    return const Icon(
-                      Icons.inventory_2,
-                      color: Color(0xFFFF6F3D),
-                      size: 24,
+                    // Fallback to default icon if image fails to load
+                    return Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFF6F3D).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(
+                        Icons.inventory_2,
+                        color: Color(0xFFFF6F3D),
+                        size: 24,
+                      ),
                     );
                   },
                 ),
@@ -534,7 +577,7 @@ class ItemOutCard extends StatelessWidget {
             ),
             const SizedBox(width: 16),
             
-
+            // Item details
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -546,6 +589,8 @@ class ItemOutCard extends StatelessWidget {
                       fontWeight: FontWeight.w600,
                       color: Colors.black87,
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 4),
                   Text(
@@ -555,6 +600,18 @@ class ItemOutCard extends StatelessWidget {
                       color: Colors.grey[600],
                     ),
                   ),
+                  if (merk.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      merk,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[500],
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
                   const SizedBox(height: 4),
                   Text(
                     'Stok: $currentAmount',
@@ -572,29 +629,24 @@ class ItemOutCard extends StatelessWidget {
               ),
             ),
             
-
+            // Remove stock button
             GestureDetector(
               onTap: currentAmount > 0 ? () => _showRemoveStockDialog(context) : null,
-              child: SizedBox(
+              child: Container(
                 width: 40,
                 height: 40,
-                child: Center(
-                  child: Opacity(
-                    opacity: currentAmount > 0 ? 1.0 : 0.3,
-                    child: Image.asset(
-                      'src/decrease.png',
-                      width: 22,
-                      height: 22,
-                      errorBuilder: (context, error, stackTrace) {
-
-                        return Icon(
-                          Icons.remove,
-                          color: currentAmount > 0 ? const Color(0xFFFF6F3D) : Colors.grey,
-                          size: 20,
-                        );
-                      },
-                    ),
-                  ),
+                decoration: BoxDecoration(
+                  color: currentAmount > 0 
+                      ? const Color(0xFFFF6F3D).withOpacity(0.1)
+                      : Colors.grey.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  Icons.remove,
+                  color: currentAmount > 0 
+                      ? const Color(0xFFFF6F3D) 
+                      : Colors.grey,
+                  size: 20,
                 ),
               ),
             ),

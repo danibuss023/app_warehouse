@@ -42,6 +42,32 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
+  Future<void> forgotPassword() async {
+    if (emailController.text.trim().isEmpty) {
+      setState(() {
+        error = 'Masukkan email terlebih dahulu';
+      });
+      return;
+    }
+
+    try {
+      await FirebaseAuth.instance.sendPasswordResetEmail(
+        email: emailController.text.trim(),
+      );
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Email reset password telah dikirim ke ${emailController.text.trim()}'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      setState(() {
+        error = 'Gagal mengirim email reset. Periksa alamat email Anda.';
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final double maxFormWidth = 300;
@@ -111,7 +137,24 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                   ),
 
-                  const SizedBox(height: 25),
+                  const SizedBox(height: 10),
+
+                  // Forgot Password Link
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: isLoading ? null : forgotPassword,
+                      child: const Text(
+                        'Lupa Password?',
+                        style: TextStyle(
+                          color: Color(0xFFFF6F3D),
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 15),
 
                   SizedBox(
                     width: double.infinity,

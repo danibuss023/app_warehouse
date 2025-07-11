@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'dart:typed_data';
+import 'package:crypto/crypto.dart';
 import 'history_page.dart';
 
 class ItemPage extends StatefulWidget {
@@ -17,13 +22,16 @@ class _ItemPageState extends State<ItemPage> with TickerProviderStateMixin {
   List<Map<String, dynamic>> filteredItems = [];
   TextEditingController searchController = TextEditingController();
   bool _isRefreshing = false;
-  bool _isInitialLoading = true; // Tambahkan ini
+  bool _isInitialLoading = true;
 
-
+  // Cloudinary configuration
+  static const String cloudName = 'do0v30ppn'; // Replace with your actual cloud name
+  static const String apiKey = 'your_api_key'; // Replace with your actual API key
+  static const String apiSecret = 'your_api_secret'; // Replace with your actual API secret
+  
   late AnimationController _loadingAnimationController;
   late AnimationController _fadeAnimationController;
   
-
   late Animation<double> _loadingAnimation;
   late Animation<double> _fadeAnimation;
 
@@ -31,7 +39,6 @@ class _ItemPageState extends State<ItemPage> with TickerProviderStateMixin {
   void initState() {
     super.initState();
     
-
     _loadingAnimationController = AnimationController(
       duration: const Duration(seconds: 2),
       vsync: this,
@@ -44,7 +51,6 @@ class _ItemPageState extends State<ItemPage> with TickerProviderStateMixin {
       parent: _loadingAnimationController,
       curve: Curves.easeInOut,
     ));
-
 
     _fadeAnimationController = AnimationController(
       duration: const Duration(milliseconds: 300),
@@ -75,12 +81,104 @@ class _ItemPageState extends State<ItemPage> with TickerProviderStateMixin {
     super.dispose();
   }
 
+  // Helper function to get item image URL from Cloudinary
+  String getItemImageUrl(String itemId) {
+    return 'https://res.cloudinary.com/$cloudName/image/upload/w_800,h_600,c_fill,q_auto/inventory_items/item_$itemId';
+  }
+
+  // Function to delete image from Cloudinary
+  Future<bool> _deleteCloudinaryImage(String itemId) async {
+    try {
+      final String publicId = 'inventory_items/item_$itemId';
+      final String timestamp = (DateTime.now().millisecondsSinceEpoch / 1000).floor().toString();
+      
+      // Create signature for Cloudinary API
+      final String stringToSign = 'public_id=$publicId&timestamp=$timestamp$apiSecret';
+      final List<int> bytes = utf8.encode(stringToSign);
+      final Digest digest = sha1.convert(bytes);
+      final String signature = digest.toString();
+
+      // Prepare request body
+      final Map<String, String> body = {
+        'public_id': publicId,
+        'timestamp': timestamp,
+        'api_key': apiKey,
+        'signature': signature,
+      };
+
+      // Make API request to delete image
+      final response = await http.post(
+        Uri.parse('https://api.cloudinary.com/v1_1/$cloudName/image/destroy'),
+        body: body,
+      );
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> responseData = json.decode(response.body);
+        return responseData['result'] == 'ok';
+      } else {
+        print('Failed to delete image from Cloudinary: ${response.statusCode}');
+        print('Response body: ${response.body}');
+        return false;
+      }
+    } catch (e) {
+      print('Error deleting image from Cloudinary: $e');
+      return false;
+    }
+  }
+
+  // Widget to display item image with fallback
+  Widget _buildItemImage(Map<String, dynamic> item, {double size = 55}) {
+    final itemId = item['docId'] ?? item['sku'] ?? 'default';
+    final imageUrl = getItemImageUrl(itemId);
+
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(8),
+        color: Colors.grey[100],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: CachedNetworkImage(
+          imageUrl: imageUrl,
+          width: size,
+          height: size,
+          fit: BoxFit.cover,
+          placeholder: (context, url) => Container(
+            width: size,
+            height: size,
+            color: Colors.grey[200],
+            child: const Center(
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Color(0xFFFF6F3D),
+              ),
+            ),
+          ),
+          errorWidget: (context, url, error) => Container(
+            width: size,
+            height: size,
+            color: const Color(0xFFFF6F3D).withOpacity(0.1),
+            child: const Center(
+              child: Icon(
+                Icons.inventory_2,
+                color: Color(0xFFFF6F3D),
+                size: 30,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
  Future<void> _initializeData() async {
     setState(() {
       _isInitialLoading = true;
     });
     
-    await Future.delayed(const Duration(milliseconds: 500)); // Delay untuk animasi
+    await Future.delayed(const Duration(milliseconds: 500));
     
     await loadCategories();
     await loadAllItems();
@@ -91,6 +189,7 @@ class _ItemPageState extends State<ItemPage> with TickerProviderStateMixin {
       });
     }
   }
+
   Future<void> loadCategories() async {
     try {
       final snapshot = await FirebaseFirestore.instance.collection('categories').get();
@@ -116,14 +215,12 @@ Future<void> loadAllItems() async {
       for (var itemDoc in itemsSnapshot.docs) {
         final itemData = itemDoc.data();
         
-        // Ambil data history berdasarkan SKU
         final historyData = await _getItemHistoryData(itemData['sku'] ?? '');
         
         items.add({
           ...itemData,
           'category': categoryDoc.id,
           'docId': itemDoc.id,
-          // Override dengan data dari history
           'dateAdded': historyData['dateAdded'],
           'lastModified': historyData['lastModified'],
           'editedBy': historyData['editedBy'],
@@ -144,7 +241,6 @@ Future<void> loadAllItems() async {
 
 Future<Map<String, dynamic>> _getItemHistoryData(String sku) async {
   try {
-    // Ambil history berdasarkan SKU, diurutkan berdasarkan timestamp
     final historySnapshot = await FirebaseFirestore.instance
         .collection('history')
         .where('itemSku', isEqualTo: sku)
@@ -159,10 +255,7 @@ Future<Map<String, dynamic>> _getItemHistoryData(String sku) async {
       };
     }
 
-    // Ambil entry pertama (tanggal masuk)
     final firstEntry = historySnapshot.docs.first.data();
-    
-    // Ambil entry terakhir (terakhir edit)
     final lastEntry = historySnapshot.docs.last.data();
 
     return {
@@ -197,7 +290,6 @@ Future<Map<String, dynamic>> _getItemHistoryData(String sku) async {
     });
   }
 
-
  Future<void> _handleRefresh() async {
     if (_isRefreshing) return;
     
@@ -206,7 +298,6 @@ Future<Map<String, dynamic>> _getItemHistoryData(String sku) async {
     });
     
     try {
-      // Delay untuk menunjukkan animasi loading
       await Future.delayed(const Duration(milliseconds: 800));
       
       await loadCategories();
@@ -229,7 +320,6 @@ Future<Map<String, dynamic>> _getItemHistoryData(String sku) async {
         final date = dateValue.toDate();
         return '${date.day}/${date.month}/${date.year} ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
       } else if (dateValue is String) {
-
         final date = DateTime.tryParse(dateValue);
         if (date != null) {
           return '${date.day}/${date.month}/${date.year} ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
@@ -241,7 +331,6 @@ Future<Map<String, dynamic>> _getItemHistoryData(String sku) async {
       return 'Invalid Date';
     }
   }
-
 
   Future<void> _launchGoogleDriveUrl(String? url) async {
     if (url == null || url.isEmpty || url == 'N/A') {
@@ -289,57 +378,64 @@ Future<Map<String, dynamic>> _getItemHistoryData(String sku) async {
   }
 
   Widget _buildHeader() {
-    return Container(
-      height: 100,
-      decoration: const BoxDecoration(
-        color: Color(0xFFFF6F3D),
-        borderRadius: BorderRadius.only(
-          bottomLeft: Radius.circular(20),
-          bottomRight: Radius.circular(20),
-        ),
+  return Container(
+    height: 120,
+    decoration: const BoxDecoration(
+      color: Color(0xFFFF6F3D),
+      borderRadius: BorderRadius.only(
+        bottomLeft: Radius.circular(25),
+        bottomRight: Radius.circular(25),
       ),
-      child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Row(
-            children: [
-              GestureDetector(
-                onTap: () => Navigator.pop(context),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: const Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.arrow_back, color: Colors.white, size: 16),
-                      SizedBox(width: 4),
-                      Text('Kembali', style: TextStyle(color: Colors.white, fontSize: 12)),
-                    ],
-                  ),
+    ),
+    child: SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+        child: Row(
+          children: [
+            GestureDetector(
+              onTap: () => Navigator.pop(context),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(25),
                 ),
-              ),
-              const Expanded(
-                child: Center(
-                  child: Text(
-                    'Barang',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.arrow_back, color: Colors.white, size: 18),
+                    SizedBox(width: 6),
+                    Text(
+                      'Back',
+                      style: TextStyle(
+                        color: Colors.white, 
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
+                  ],
+                ),
+              ),
+            ),
+            const Expanded(
+              child: Center(
+                child: Text(
+                  'Items',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
               ),
-              const SizedBox(width: 60),
-            ],
-          ),
+            ),
+            const SizedBox(width: 80),
+          ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildSearchAndFilter() {
     return Padding(
@@ -410,17 +506,14 @@ Future<Map<String, dynamic>> _getItemHistoryData(String sku) async {
   }
 
  Widget _buildItemsList() {
-    // Jika initial loading
     if (_isInitialLoading) {
       return _buildAnimatedLoadingWidget();
     }
     
-    // Jika masih loading refresh dan belum ada data
     if (allItems.isEmpty && _isRefreshing) {
       return _buildAnimatedLoadingWidget();
     }
 
-    // Jika tidak ada data sama sekali setelah loading selesai
     if (allItems.isEmpty && !_isRefreshing) {
       return TweenAnimationBuilder<double>(
         duration: const Duration(milliseconds: 800),
@@ -457,7 +550,6 @@ Future<Map<String, dynamic>> _getItemHistoryData(String sku) async {
       );
     }
 
-    // Jika ada data tapi hasil filter kosong
     if (filteredItems.isEmpty) {
       return TweenAnimationBuilder<double>(
         duration: const Duration(milliseconds: 600),
@@ -549,7 +641,6 @@ Future<Map<String, dynamic>> _getItemHistoryData(String sku) async {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-
           AnimatedBuilder(
             animation: _loadingAnimation,
             builder: (context, child) {
@@ -569,19 +660,11 @@ Future<Map<String, dynamic>> _getItemHistoryData(String sku) async {
                       stops: const [0.0, 0.5, 1.0],
                     ),
                   ),
-                  child: Center(
-                    child: Image.asset(
-                      'src/item.png',
-                      width: 30,
-                      height: 30,
+                  child: const Center(
+                    child: Icon(
+                      Icons.inventory_2,
                       color: Colors.white,
-                      errorBuilder: (context, error, stackTrace) {
-                        return const Icon(
-                          Icons.inventory_2,
-                          color: Colors.white,
-                          size: 30,
-                        );
-                      },
+                      size: 30,
                     ),
                   ),
                 ),
@@ -590,7 +673,6 @@ Future<Map<String, dynamic>> _getItemHistoryData(String sku) async {
           ),
           const SizedBox(height: 24),
           
-
           AnimatedBuilder(
             animation: _loadingAnimation,
             builder: (context, child) {
@@ -610,7 +692,6 @@ Future<Map<String, dynamic>> _getItemHistoryData(String sku) async {
           
           const SizedBox(height: 16),
           
-
           AnimatedBuilder(
             animation: _loadingAnimation,
             builder: (context, child) {
@@ -660,29 +741,14 @@ Future<Map<String, dynamic>> _getItemHistoryData(String sku) async {
       ),
       child: Row(
         children: [
-
           AnimatedContainer(
             duration: const Duration(milliseconds: 200),
             width: 50,
             height: 50,
-            child: Center(
-              child: Image.asset(
-                'src/item.png',
-                width: 55,
-                height: 55,
-                errorBuilder: (context, error, stackTrace) {
-                  return const Icon(
-                    Icons.inventory_2,
-                    color: Color(0xFFFF6F3D),
-                    size: 30,
-                  );
-                },
-              ),
-            ),
+            child: _buildItemImage(item, size: 50),
           ),
           const SizedBox(width: 16),
           
-
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -719,7 +785,6 @@ Future<Map<String, dynamic>> _getItemHistoryData(String sku) async {
             ),
           ),
           
-
           Row(
             children: [
               AnimatedScale(
@@ -792,26 +857,12 @@ Future<Map<String, dynamic>> _getItemHistoryData(String sku) async {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-
                         Container(
                           padding: const EdgeInsets.all(20),
                           child: Row(
                             children: [
-                              SizedBox(
-                                width: 50,
-                                height: 50,
-                                child: Image.asset(
-                                  'src/item.png',
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) {
-                                    return const Icon(
-                                      Icons.inventory_2,
-                                      color: Color(0xFFFF6F3D),
-                                      size: 30,
-                                    );
-                                  },
-                                ),
-                              ),
+                              // Replace static image with Cloudinary image
+                              _buildItemImage(item, size: 50),
                               const SizedBox(width: 15),
                               Expanded(
                                 child: Column(
@@ -844,20 +895,17 @@ Future<Map<String, dynamic>> _getItemHistoryData(String sku) async {
                         ),
                         const Divider(height: 1),
                         
-
                         Flexible(
                           child: SingleChildScrollView(
                             padding: const EdgeInsets.all(20),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-
                                 _buildInfoRow('SKU', item['sku']?.toString() ?? 'N/A'),
                                 _buildInfoRow('Nama', item['name']?.toString() ?? 'N/A'),
                                 _buildInfoRow('Merk', item['merk']?.toString() ?? 'N/A'),
                                 _buildInfoRow('Jumlah Stok', item['amount']?.toString() ?? '0'),
                                 
-
                                 _buildInfoRowWithDescription(
                                   'Tanggal Masuk', 
                                   _formatDate(item['dateAdded']),
@@ -872,7 +920,6 @@ Future<Map<String, dynamic>> _getItemHistoryData(String sku) async {
                                 
                                 _buildInfoRow('Diedit Oleh', item['editedBy']?.toString() ?? 'N/A'),
                                 
-
                                 _buildDescriptionRow(
                                   'Dokumentasi', 
                                   item['description']?.toString() ?? 'N/A',

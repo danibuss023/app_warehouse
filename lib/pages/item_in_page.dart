@@ -481,6 +481,12 @@ class ItemInCard extends StatelessWidget {
     required this.onStockAdded,
   });
 
+  // Helper function to get item image URL
+  String getItemImageUrl(String itemId) {
+    const String cloudName = "do0v30ppn";
+    return 'https://res.cloudinary.com/$cloudName/image/upload/w_96,h_96,c_fill,q_auto/inventory_items/item_$itemId';
+  }
+
   @override
   Widget build(BuildContext context) {
     final String sku = itemData['sku'] ?? '';
@@ -505,21 +511,58 @@ class ItemInCard extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         child: Row(
           children: [
-
-            SizedBox(
+            // Item image from Cloudinary
+            Container(
               width: 48,
               height: 48,
-              child: Center(
-                child: Image.asset(
-                  'src/item.png',
-                  width: 55,
-                  height: 55,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(8),
+                color: Colors.grey[100],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Image.network(
+                  getItemImageUrl(sku), // Use SKU as item ID
+                  width: 48,
+                  height: 48,
+                  fit: BoxFit.cover,
+                  loadingBuilder: (context, child, loadingProgress) {
+                    if (loadingProgress == null) return child;
+                    return Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[200],
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Center(
+                        child: SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.grey[400]!,
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
                   errorBuilder: (context, error, stackTrace) {
-
-                    return const Icon(
-                      Icons.inventory_2,
-                      color: Color(0xFFFF6F3D),
-                      size: 24,
+                    // Fallback to default icon if image fails to load
+                    return Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFF6F3D).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(
+                        Icons.inventory_2,
+                        color: Color(0xFFFF6F3D),
+                        size: 24,
+                      ),
                     );
                   },
                 ),
@@ -527,7 +570,7 @@ class ItemInCard extends StatelessWidget {
             ),
             const SizedBox(width: 16),
             
-
+            // Item details
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -539,6 +582,8 @@ class ItemInCard extends StatelessWidget {
                       fontWeight: FontWeight.w600,
                       color: Colors.black87,
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 4),
                   Text(
@@ -548,6 +593,18 @@ class ItemInCard extends StatelessWidget {
                       color: Colors.grey[600],
                     ),
                   ),
+                  if (merk.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      merk,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[500],
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
                   const SizedBox(height: 4),
                   Text(
                     'Stok: $currentAmount',
@@ -565,26 +622,20 @@ class ItemInCard extends StatelessWidget {
               ),
             ),
             
-
+            // Add stock button
             GestureDetector(
               onTap: () => _showAddStockDialog(context),
-              child: SizedBox(
+              child: Container(
                 width: 40,
                 height: 40,
-                child: Center(
-                  child: Image.asset(
-                    'src/add.png',
-                    width: 22,
-                    height: 22,
-                    errorBuilder: (context, error, stackTrace) {
-
-                      return const Icon(
-                        Icons.add,
-                        color: Color(0xFFFF6F3D),
-                        size: 20,
-                      );
-                    },
-                  ),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFF6F3D).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.add,
+                  color: Color(0xFFFF6F3D),
+                  size: 20,
                 ),
               ),
             ),
@@ -593,6 +644,7 @@ class ItemInCard extends StatelessWidget {
       ),
     );
   }
+
 
   void _showAddStockDialog(BuildContext context) {
     final amountController = TextEditingController();
