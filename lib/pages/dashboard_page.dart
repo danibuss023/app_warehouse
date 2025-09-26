@@ -84,51 +84,114 @@ class _DashboardPageState extends State<DashboardPage> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF1F1F1),
-      appBar: AppBar(
-        title: const Text(
-          'Dashboard',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
-        backgroundColor: const Color(0xFFFF6F3D),
-        elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: loadDashboardData,
+@override
+Widget build(BuildContext context) {
+  return Scaffold(
+    backgroundColor: const Color(0xFFF1F1F1),
+    body: Column(
+      children: [
+        _buildHeader(),
+        Expanded(
+          child: RefreshIndicator(
+            color: const Color(0xFFFF6F3D), // warna loading pas swipe
+            onRefresh: () async {
+              await loadDashboardData(); // ✅ panggil function refresh
+            },
+            child: isLoading
+                ? const Center(
+                    child: CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation(Color(0xFFFF6F3D)),
+                    ),
+                  )
+                : SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(), // ✅ wajib biar bisa swipe meskipun data sedikit
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildSummaryCards(),
+                        const SizedBox(height: 20),
+                        _buildBarChartSection(),
+                        const SizedBox(height: 20),
+                        _buildLowStockSection(),
+                      ],
+                    ),
+                  ),
           ),
-        ],
+        ),
+      ],
+    ),
+  );
+}
+
+Widget _buildHeader() {
+  return Container(
+    height: 100,
+    decoration: const BoxDecoration(
+      color: Color(0xFFFF6F3D),
+      borderRadius: BorderRadius.only(
+        // bottomLeft: Radius.circular(20),
+        // bottomRight: Radius.circular(20),
       ),
-      body: isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildSummaryCards(),
-                  const SizedBox(height: 20),
-                  
-                  _buildPieChartSection(),
-                  const SizedBox(height: 20),
-                  
-                  _buildLowStockSection(),
-                ],
+    ),
+    child: SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        child: Row(
+          children: [
+            // 🔙 Tombol Back
+            GestureDetector(
+              onTap: () => Navigator.pop(context),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.arrow_back, color: Colors.white, size: 18),
+                    SizedBox(width: 6),
+                    Text(
+                      "Kembali",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-    );
-  }
+
+            const Expanded(
+              child: Center(
+                child: Text(
+                  "Dashboard",
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 60), // Space to balance the back button
+          ],
+        ),
+      ),
+    ),
+  );
+}
 
   Widget _buildSummaryCards() {
     return Row(
       children: [
         Expanded(
           child: _buildSummaryCard(
-            'Total Items',
+            'Total Barang',
             totalItems.toString(),
             Icons.inventory_2,
             Colors.blue,
@@ -137,7 +200,7 @@ class _DashboardPageState extends State<DashboardPage> {
         const SizedBox(width: 12),
         Expanded(
           child: _buildSummaryCard(
-            'Categories',
+            'Kategori',
             totalCategories.toString(),
             Icons.category,
             Colors.green,
@@ -146,7 +209,7 @@ class _DashboardPageState extends State<DashboardPage> {
         const SizedBox(width: 12),
         Expanded(
           child: _buildSummaryCard(
-            'Low Stock',
+            'Stok Menipis',
             lowStockItems.length.toString(),
             Icons.warning,
             Colors.orange,
@@ -196,97 +259,106 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
-  Widget _buildPieChartSection() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 1,
-            blurRadius: 6,
-            offset: const Offset(0, 3),
+Widget _buildBarChartSection() {
+  final categories = categoryData.keys.toList();
+  final values = categoryData.values.toList();
+  final maxValue = values.isNotEmpty ? values.reduce((a, b) => a > b ? a : b) : 0;
+
+  return Container(
+    padding: const EdgeInsets.all(16),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(12),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.grey.withOpacity(0.1),
+          spreadRadius: 1,
+          blurRadius: 6,
+          offset: const Offset(0, 3),
+        ),
+      ],
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          "Barang per Kategori",
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Colors.black87,
           ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Items Distribution by Category',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
-            ),
-          ),
-          const SizedBox(height: 20),
-          
-          if (categoryData.isEmpty)
-            const Center(
-              child: Padding(
-                padding: EdgeInsets.all(40),
-                child: Text(
-                  'No items found',
-                  style: TextStyle(color: Colors.grey),
-                ),
-              ),
-            )
-          else
-            Column(
-              children: [
-                SizedBox(
-                  height: 250,
-                  child: PieChart(
-                    PieChartData(
-                      sections: _generatePieChartSections(),
-                      centerSpaceRadius: 40,
-                      sectionsSpace: 2,
-                    ),
+        ),
+        const SizedBox(height: 20),
+        SizedBox(
+          height: 250,
+          child: BarChart(
+            BarChartData(
+              alignment: BarChartAlignment.spaceAround,
+              maxY: (maxValue * 1.2).toDouble(), // kasih buffer biar ga mentok
+              barTouchData: BarTouchData(enabled: true),
+              gridData: FlGridData(show: true),
+              titlesData: FlTitlesData(
+                leftTitles: AxisTitles(
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    reservedSize: 40,
+                    getTitlesWidget: (value, meta) {
+                      // hanya tampilkan angka bulat
+                      if (value % 1 == 0) {
+                        return Text(
+                          value.toInt().toString(),
+                          style: const TextStyle(fontSize: 10),
+                        );
+                      }
+                      return const SizedBox.shrink();
+                    },
                   ),
                 ),
-                const SizedBox(height: 16),
-                _buildLegend(),
-              ],
+                rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                bottomTitles: AxisTitles(
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    getTitlesWidget: (value, meta) {
+                      if (value.toInt() >= 0 && value.toInt() < categories.length) {
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 8.0),
+                          child: Text(
+                            categories[value.toInt()],
+                            style: const TextStyle(fontSize: 10),
+                          ),
+                        );
+                      }
+                      return const SizedBox.shrink();
+                    },
+                  ),
+                ),
+              ),
+
+              borderData: FlBorderData(show: false),
+              barGroups: List.generate(categories.length, (i) {
+                return BarChartGroupData(
+                  x: i,
+                  barRods: [
+                    BarChartRodData(
+                      toY: values[i].toDouble(),
+                      color: const Color(0xFFFF6F3D),
+                      width: 18,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                  ],
+                );
+              }),
             ),
-        ],
-      ),
-    );
-  }
-
-  List<PieChartSectionData> _generatePieChartSections() {
-    final colors = [
-      const Color(0xFFFF6F3D),
-      const Color(0xFF4285F4),
-      const Color(0xFF34A853),
-      const Color(0xFFFBBC05),
-      const Color(0xFFEA4335),
-      const Color(0xFF9C27B0),
-      const Color(0xFF00BCD4),
-      const Color(0xFFFF9800),
-    ];
-
-    return categoryData.entries.map((entry) {
-      final index = categoryData.keys.toList().indexOf(entry.key);
-      final percentage = (entry.value / totalItems * 100);
-      
-      return PieChartSectionData(
-        color: colors[index % colors.length],
-        value: entry.value.toDouble(),
-        title: '${percentage.toStringAsFixed(1)}%',
-        radius: 80,
-        titleStyle: const TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.bold,
-          color: Colors.white,
+          ),
         ),
-      );
-    }).toList();
-  }
+      ],
+    ),
+  );
+}
 
-  Widget _buildLegend() {
+ Widget _buildLegend() {
     final colors = [
       const Color(0xFFFF6F3D),
       const Color(0xFF4285F4),
@@ -327,7 +399,7 @@ class _DashboardPageState extends State<DashboardPage> {
 
   Widget _buildLowStockSection() {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
@@ -343,30 +415,6 @@ class _DashboardPageState extends State<DashboardPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              const Icon(Icons.warning, color: Colors.orange),
-              const SizedBox(width: 8),
-              const Text(
-                'Low Stock Alert',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
-              ),
-              const Spacer(),
-              Text(
-                'Threshold: ≤$lowStockThreshold',
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          
           if (lowStockItems.isEmpty)
             const Center(
               child: Padding(
@@ -424,7 +472,7 @@ class _DashboardPageState extends State<DashboardPage> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
-                      item.amount == 0 ? 'OUT OF STOCK' : 'LOW STOCK',
+                      item.amount == 0 ? 'STOK HABIS' : 'STOK MENIPIS',
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 10,

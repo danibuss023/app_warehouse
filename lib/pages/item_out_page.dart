@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:async';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'history_page.dart';
 
 class ItemOutPage extends StatefulWidget {
@@ -87,8 +86,8 @@ class _ItemOutPageState extends State<ItemOutPage> with TickerProviderStateMixin
       decoration: const BoxDecoration(
         color: Color(0xFFFF6F3D),
         borderRadius: BorderRadius.only(
-          bottomLeft: Radius.circular(20),
-          bottomRight: Radius.circular(20),
+          // bottomLeft: Radius.circular(20),
+          // bottomRight: Radius.circular(20),
         ),
       ),
       child: SafeArea(
@@ -99,9 +98,9 @@ class _ItemOutPageState extends State<ItemOutPage> with TickerProviderStateMixin
               GestureDetector(
                 onTap: () => Navigator.pop(context),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
+                    color: const Color.fromARGB(255, 0, 0, 0).withOpacity(0.2),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: const Row(
@@ -109,7 +108,7 @@ class _ItemOutPageState extends State<ItemOutPage> with TickerProviderStateMixin
                     children: [
                       Icon(Icons.arrow_back, color: Colors.white, size: 16),
                       SizedBox(width: 4),
-                      Text('Kembali', style: TextStyle(color: Colors.white, fontSize: 12)),
+                      Text('Kembali', style: TextStyle(color: Colors.white, fontSize: 14)),
                     ],
                   ),
                 ),
@@ -372,7 +371,7 @@ class _ItemOutPageState extends State<ItemOutPage> with TickerProviderStateMixin
               String dots = '.' * dotCount;
               
               return Text(
-                'Loading items$dots',
+                'Wait $dots',
                 style: TextStyle(
                   color: Colors.grey[600],
                   fontSize: 16,

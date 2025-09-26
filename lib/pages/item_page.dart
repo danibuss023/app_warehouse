@@ -16,8 +16,8 @@ class ItemPage extends StatefulWidget {
 }
 
 class _ItemPageState extends State<ItemPage> with TickerProviderStateMixin {
-  String selectedCategory = 'All';
-  List<String> categories = ['All'];
+  String selectedCategory = 'Semua';
+  List<String> categories = ['Semua'];
   List<Map<String, dynamic>> allItems = [];
   List<Map<String, dynamic>> filteredItems = [];
   TextEditingController searchController = TextEditingController();
@@ -196,7 +196,7 @@ class _ItemPageState extends State<ItemPage> with TickerProviderStateMixin {
       final categoryList = snapshot.docs.map((doc) => doc.id).toList();
       if (mounted) {
         setState(() {
-          categories = ['All', ...categoryList];
+          categories = ['Semua', ...categoryList];
         });
       }
     } catch (e) {
@@ -282,7 +282,7 @@ Future<Map<String, dynamic>> _getItemHistoryData(String sku) async {
             item['sku'].toString().toLowerCase().contains(query) ||
             item['merk'].toString().toLowerCase().contains(query);
         
-        final matchesCategory = selectedCategory == 'All' || 
+        final matchesCategory = selectedCategory == 'Semua' || 
             item['category'] == selectedCategory;
         
         return matchesSearch && matchesCategory;
@@ -379,12 +379,12 @@ Future<Map<String, dynamic>> _getItemHistoryData(String sku) async {
 
   Widget _buildHeader() {
   return Container(
-    height: 120,
+    height: 100,
     decoration: const BoxDecoration(
       color: Color(0xFFFF6F3D),
       borderRadius: BorderRadius.only(
-        bottomLeft: Radius.circular(25),
-        bottomRight: Radius.circular(25),
+        // bottomLeft: Radius.circular(25),
+        // bottomRight: Radius.circular(25),
       ),
     ),
     child: SafeArea(
@@ -395,7 +395,7 @@ Future<Map<String, dynamic>> _getItemHistoryData(String sku) async {
             GestureDetector(
               onTap: () => Navigator.pop(context),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
                   color: Colors.black.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(25),
@@ -406,7 +406,7 @@ Future<Map<String, dynamic>> _getItemHistoryData(String sku) async {
                     Icon(Icons.arrow_back, color: Colors.white, size: 18),
                     SizedBox(width: 6),
                     Text(
-                      'Back',
+                      'Kembali',
                       style: TextStyle(
                         color: Colors.white, 
                         fontSize: 14,
@@ -420,7 +420,7 @@ Future<Map<String, dynamic>> _getItemHistoryData(String sku) async {
             const Expanded(
               child: Center(
                 child: Text(
-                  'Items',
+                  'Stok Barang',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 20,
@@ -463,7 +463,7 @@ Future<Map<String, dynamic>> _getItemHistoryData(String sku) async {
           SizedBox(
             width: 110,
             child: DropdownButtonFormField<String>(
-              value: selectedCategory,
+              initialValue: selectedCategory,
               isExpanded: true,
               icon: const Icon(Icons.keyboard_arrow_down, color: Colors.grey),
               style: const TextStyle(fontSize: 14, color: Colors.black),
@@ -680,7 +680,7 @@ Future<Map<String, dynamic>> _getItemHistoryData(String sku) async {
               String dots = '.' * dotCount;
               
               return Text(
-                'Loading items$dots',
+                'Wait $dots',
                 style: TextStyle(
                   color: Colors.grey[600],
                   fontSize: 16,

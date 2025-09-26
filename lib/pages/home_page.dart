@@ -122,7 +122,7 @@ class HomePage extends StatelessWidget {
         alignment: WrapAlignment.start,
         children: const [
           MenuImageItem(imagePath: 'src/dashboard.png', label: 'Dashboard'),
-          MenuImageItem(imagePath: 'src/item.png', label: 'Barang'),
+          MenuImageItem(imagePath: 'src/item.png', label: 'Stok Barang'),
           MenuImageItem(imagePath: 'src/itemin.png', label: 'Barang Masuk'),
           MenuImageItem(imagePath: 'src/itemout.png', label: 'Barang Keluar'),
           MenuImageItem(imagePath: 'src/history.png', label: 'History'),
@@ -1119,7 +1119,7 @@ class MenuImageItem extends StatelessWidget {
             context,
             MaterialPageRoute(builder: (context) => const DashboardPage()),
           );
-        } else if (label == 'Barang') {
+        } else if (label == 'Stok Barang') {
           Navigator.push(
             context,
             MaterialPageRoute(builder: (context) => const ItemPage()),

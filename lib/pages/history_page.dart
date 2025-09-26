@@ -14,11 +14,11 @@ class HistoryPage extends StatefulWidget {
 }
 
 class _HistoryPageState extends State<HistoryPage> {
-  String selectedFilter = 'All';
-  final List<String> filterOptions = ['All', 'Barang masuk', 'Barang keluar', 'Barang baru', 'Barang dihapus'];
+  String selectedFilter = 'Semua';
+  final List<String> filterOptions = ['Semua', 'Barang masuk', 'Barang keluar', 'Barang baru', 'Barang dihapus'];
 
   List<DocumentSnapshot> _filterDocuments(List<DocumentSnapshot> docs) {
-    if (selectedFilter == 'All') {
+    if (selectedFilter == 'Semua') {
       return docs;
     }
     
@@ -379,199 +379,254 @@ class _HistoryPageState extends State<HistoryPage> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF1F1F1),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFFFF6F3D),
-        title: const Text('History', style: TextStyle(color: Colors.white)),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.download, color: Colors.white),
-            onPressed: _showReportDialog,
-            tooltip: 'Generate Report',
-          ),
-        ],
-        elevation: 0,
-      ),
-      body: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.grey[110],
-              boxShadow: [
-                // BoxShadow(
-                //   color: Colors.grey.withOpacity(0.1),
-                //   spreadRadius: 1,
-                //   blurRadius: 3,
-                //   offset: const Offset(0, 1),
-                // ),
-              ],
-            ),
-            child: Column(
-  children: [
-    Row(
-      mainAxisAlignment: MainAxisAlignment.end,
+ Widget build(BuildContext context) {
+  return Scaffold(
+    backgroundColor: const Color(0xFFF1F1F1),
+    body: Column(
       children: [
-        const Text(
-          'Filter: ', 
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 16,
+        _buildHeader(), // ✅ custom header ganti AppBar
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.grey[100],
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              SizedBox(
+                width: 120,
+                child: DropdownButtonFormField<String>(
+                  value: selectedFilter,
+                  isExpanded: true,
+                  icon: const Icon(Icons.keyboard_arrow_down, color: Colors.grey),
+                  style: const TextStyle(fontSize: 14, color: Colors.black),
+                  decoration: InputDecoration(
+                    labelText: 'Filter',
+                    labelStyle: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey,
+                    ),
+                    filled: true,
+                    fillColor: Colors.white,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 10,
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.grey.shade400),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: Color(0xFFFF6F3D)),
+                    ),
+                  ),
+                  items: filterOptions.map((option) {
+                    return DropdownMenuItem<String>(
+                      value: option,
+                      child: Text(option),
+                    );
+                  }).toList(),
+                  onChanged: (value) {
+                    if (value != null) {
+                      setState(() {
+                        selectedFilter = value;
+                      });
+                    }
+                  },
+                ),
+              ),
+            ],
           ),
         ),
-        Container(
-          width: 100, 
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            border: Border.all(color: Colors.white),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: DropdownButton<String>(
-            value: selectedFilter,
-            isExpanded: true,
-            underline: const SizedBox(),
-            items: filterOptions.map((String value) {
-              return DropdownMenuItem<String>(
-                value: value,
-                child: Text(
-                  value,
-                  style: const TextStyle(fontSize: 14),
-                ),
-              );
-            }).toList(),
-            onChanged: (String? newValue) {
-              if (newValue != null) {
-                setState(() {
-                  selectedFilter = newValue;
-                });
+
+        // 🔥 History List
+        Expanded(
+          child: StreamBuilder<QuerySnapshot>(
+            stream: FirebaseFirestore.instance
+                .collection('history')
+                .orderBy('timestamp', descending: true)
+                .snapshots(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(
+                  child: CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFFF6F3D)),
+                  ),
+                );
               }
+
+              if (snapshot.hasError) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.error_outline, size: 64, color: Colors.red[400]),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Error: ${snapshot.error}',
+                        style: TextStyle(color: Colors.red[600]),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                );
+              }
+
+              if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                return const Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.history, size: 64, color: Colors.grey),
+                      SizedBox(height: 16),
+                      Text(
+                        'No history data found',
+                        style: TextStyle(
+                          color: Colors.grey,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }
+
+              List<DocumentSnapshot> filteredDocs =
+                  _filterDocuments(snapshot.data!.docs);
+
+              if (filteredDocs.isEmpty) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.filter_list_off, size: 64, color: Colors.grey),
+                      const SizedBox(height: 16),
+                      Text(
+                        'No data found for "$selectedFilter" filter',
+                        style: const TextStyle(
+                          color: Colors.grey,
+                          fontSize: 16,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      TextButton(
+                        onPressed: () {
+                          setState(() {
+                            selectedFilter = 'Semua';
+                          });
+                        },
+                        child: const Text('Clear Filter'),
+                      ),
+                    ],
+                  ),
+                );
+              }
+
+              return ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: filteredDocs.length,
+                itemBuilder: (context, index) {
+                  final doc = filteredDocs[index];
+                  final data = doc.data() as Map<String, dynamic>;
+
+                  return HistoryCard(
+                    action: data['action'] ?? '',
+                    itemSku: data['item_sku'] ?? '',
+                    itemName: data['item_name'] ?? '',
+                    itemMerk: data['item_merk'] ?? '',
+                    category: data['category'] ?? '',
+                    amount: data['amount'] ?? 0,
+                    previousAmount: data['previous_amount'],
+                    newAmount: data['new_amount'],
+                    timestamp: data['timestamp'],
+                    userEmail: data['user_email'] ?? '',
+                    description: data['description'] ?? '',
+                  );
+                },
+              );
             },
           ),
         ),
       ],
     ),
-  ],
-),
-          ),
-
-          Expanded(
-            child: StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance
-                  .collection('history')
-                  .orderBy('timestamp', descending: true)
-                  .snapshots(),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(
-                    child: CircularProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFFF6F3D)),
-                    ),
-                  );
-                }
-
-                if (snapshot.hasError) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.error_outline, size: 64, color: Colors.red[400]),
-                        const SizedBox(height: 16),
-                        Text(
-                          'Error: ${snapshot.error}',
-                          style: TextStyle(color: Colors.red[600]),
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
-                    ),
-                  );
-                }
-
-                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                  return const Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.history, size: 64, color: Colors.grey),
-                        SizedBox(height: 16),
-                        Text(
-                          'No history data found',
-                          style: TextStyle(
-                            color: Colors.grey,
-                            fontSize: 16,
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                }
-
-                List<DocumentSnapshot> filteredDocs = _filterDocuments(snapshot.data!.docs);
-
-                if (filteredDocs.isEmpty) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.filter_list_off, size: 64, color: Colors.grey),
-                        const SizedBox(height: 16),
-                        Text(
-                          'No data found for "$selectedFilter" filter',
-                          style: const TextStyle(
-                            color: Colors.grey,
-                            fontSize: 16,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        TextButton(
-                          onPressed: () {
-                            setState(() {
-                              selectedFilter = 'All';
-                            });
-                          },
-                          child: const Text('Clear Filter'),
-                        ),
-                      ],
-                    ),
-                  );
-                }
-
-                return ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: filteredDocs.length,
-                  itemBuilder: (context, index) {
-                    final doc = filteredDocs[index];
-                    final data = doc.data() as Map<String, dynamic>;
-                    
-                    return HistoryCard(
-                      action: data['action'] ?? '',
-                      itemSku: data['item_sku'] ?? '',
-                      itemName: data['item_name'] ?? '',
-                      itemMerk: data['item_merk'] ?? '',
-                      category: data['category'] ?? '',
-                      amount: data['amount'] ?? 0,
-                      previousAmount: data['previous_amount'],
-                      newAmount: data['new_amount'],
-                      timestamp: data['timestamp'],
-                      userEmail: data['user_email'] ?? '',
-                      description: data['description'] ?? '',
-                    );
-                  },
-                );
-              },
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  );
 }
+  Widget _buildHeader() {
+  return Container(
+    height: 100,
+    decoration: const BoxDecoration(
+      color: Color(0xFFFF6F3D),
+      borderRadius: BorderRadius.only(
+        // bottomLeft: Radius.circular(20),
+        // bottomRight: Radius.circular(20),
+      ),
+    ),
+    child: SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        child: Row(
+          children: [
+            // 🔙 Tombol Back dengan background hitam transparan
+            GestureDetector(
+              onTap: () => Navigator.pop(context),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.2), // transparan
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.arrow_back, color: Colors.white, size: 18),
+                    SizedBox(width: 6),
+                    Text(
+                      "Kembali",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            const Expanded(
+              child: Center(
+                child: Text(
+                  "History",
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+            SizedBox(width: 40), // Space to balance the back button
+            // 📥 Tombol Download kanan
+            GestureDetector(
+              onTap: _showReportDialog,
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: const Icon(Icons.download, color: Colors.white, size: 20),
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+ }
 
 class HistoryCard extends StatelessWidget {
   final String action;
@@ -707,7 +762,7 @@ class HistoryCard extends StatelessWidget {
                           Text(
                             'By : ${userEmail.split('@').first}',
                             style: const TextStyle(
-                              color: const Color.fromARGB(255, 90, 90, 90),
+                              color: Color.fromARGB(255, 90, 90, 90),
                               fontSize: 13,
                               fontWeight: FontWeight.w500,
                             ),
@@ -779,7 +834,7 @@ class HistoryCard extends StatelessWidget {
     String amountText;
     if (action == 'item_in' || action == 'item_out') {
       if (previousAmount != null && newAmount != null) {
-        amountText = '$previousAmount → $newAmount (${action == 'item_in' ? '+' : '-'}${amount})';
+        amountText = '$previousAmount → $newAmount (${action == 'item_in' ? '+' : '-'}$amount)';
       } else {
         amountText = amount.toString();
       }
