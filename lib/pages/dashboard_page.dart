@@ -358,6 +358,7 @@ Widget _buildBarChartSection() {
   );
 }
 
+//cek
  Widget _buildLegend() {
     final colors = [
       const Color(0xFFFF6F3D),
