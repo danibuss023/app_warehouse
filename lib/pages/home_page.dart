@@ -63,16 +63,35 @@ class HomePage extends StatelessWidget {
       height: 250,
       child: Stack(
         children: [
+          // Positioned(
+          //   top: 0, left: 0, right: 0, bottom: -50,
+          //   child: Image.asset('src/header2.png', fit: BoxFit.cover),
+          // ),
+          // Positioned(
+          //   top: 0, left: 0, right: 0, bottom: -30,
+          //   child: Image.asset('src/header1.png', fit: BoxFit.cover),
+          // ),
+            Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            height: 100, // Reduced height for the gradient background
+            child: Container(
+              decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Color(0xFFFF6F3D), Color(0xFFFF8E53)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.only(
+                // bottomLeft: Radius.circular(30),
+                // bottomRight: Radius.circular(30),
+              ),
+              ),
+            ),
+            ),
           Positioned(
-            top: 0, left: 0, right: 0, bottom: -50,
-            child: Image.asset('src/header2.png', fit: BoxFit.cover),
-          ),
-          Positioned(
-            top: 0, left: 0, right: 0, bottom: -30,
-            child: Image.asset('src/header1.png', fit: BoxFit.cover),
-          ),
-          Positioned(
-            top: 60, left: 20,
+            top: 24, left: 20,
             child: Row(
               children: [
                 const CircleAvatar(backgroundImage: AssetImage('src/logo.png'), radius: 28),
@@ -88,7 +107,7 @@ class HomePage extends StatelessWidget {
             ),
           ),
           Positioned(
-            top: 50, right: 10,
+            top: 25, right: 10,
             child: PopupMenuButton<String>(
               icon: const Icon(Icons.more_vert, color: Colors.white),
               onSelected: (value) {
